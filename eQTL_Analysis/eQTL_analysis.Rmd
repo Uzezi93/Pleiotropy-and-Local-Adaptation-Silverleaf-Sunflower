@@ -1,0 +1,302 @@
+---
+title: "eQTL_analysis"
+author: "Uzezi Okinedo"
+date: "1/4/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+setwd("../eQTL_analysis/")
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load required packages}
+
+# load tidyverse package
+library(tidyverse)
+#library(dplyr)
+library(tidyr)
+library(MatrixEQTL)
+library(trio)
+library(broom)
+library(Biobase)
+library(qvalue)
+library(tidyverse)
+library(data.table)
+
+```
+
+```{r load data}
+
+# Process SNPs for eQTL analysis
+snps1 <- read.table("filtered_vcf.012", sep = "\t", header = TRUE, row.names = NULL)
+snps <- data.frame(t(snps1))
+
+# Edit snp dataframe to reflect same number of rows as loci dataset
+snps <- snps[-c(1, 106133, 106134), ]
+snp_colname <- read.table("filtered_vcf.012.indv", sep = "\t", header = FALSE, skip = 1)
+snp_loc <- read.table("filtered_vcf.012.pos", sep = "\t", header = FALSE, skip = 1)
+snp_loc <- snp_loc[-c(1), ]
+row.names(snp_loc) <- make.names(snp_loc$V1, unique = TRUE)
+colnames(snps) <- snp_colname$V1
+row.names(snps) <- row.names(snp_loc)
+snps <- snps[, order(names(snps))]
+
+# snp column to snp_loc data
+snp_loc <- rownames_to_column(snp_loc, var = "RowNames")
+colnames(snp_loc) <- c("snps", "chrom", "pos")
+
+# Remove genebank accessions from snps dataset
+snps$Ames449.Aligned.sortedByCoord.out.bam <- NULL
+snps$Ames695.Aligned.sortedByCoord.out.bam <- NULL
+snps$ARG1805.Aligned.sortedByCoord.out.bam <- NULL
+snps$ARG1820.Aligned.sortedByCoord.out.bam <- NULL
+snps$ARG1834.Aligned.sortedByCoord.out.bam <- NULL
+
+# Remove missing genotypes
+# snps <- subset(snps, !rowSums(snps < 0)) # this seems to be biased against the reference
+# k <- setdiff(snp_loc$snps, row.names(snps))
+# snp_loc <- snp_loc[!snp_loc$snps %in% k, ]
+
+# Repair snp colnames
+colnames(snps) <- gsub(".Aligned.sortedByCoord.out.bam", "", colnames(snps))
+colnames(snps) <- gsub("-", ".", colnames(snps))
+snps$btm7B.14 <- NULL
+snps$arg11B.11 <- NULL
+snps$btm5.1 <- NULL
+
+# Compare snp data set to expression data set
+# expr <- read.table("normalized_readcounts.txt", sep = "\t", header = TRUE, row.names = 1)
+
+load("expr_residuals.RData")
+expr <- data.frame(t(res_data))
+expr$btm5.1 <- NULL
+expr$arg11B.11 <- NULL
+expr$btm9.4 <- NULL
+expr$btm7B.14 <- NULL
+
+# Convert expr to numeric
+expr <- as.data.frame(lapply(expr, function(x) as.numeric(as.character(x))))
+
+# Convert the row names of the original data frame into column names
+expr$Gene_id <- colnames(res_data)
+rownames(expr) <- expr$Gene_id
+expr$Gene_id <- NULL
+
+# Remove missing locus?
+gene_loc <- read.table("gene_loc.txt", header = TRUE)
+rownames(gene_loc) <- gene_loc$Geneid
+# h <- setdiff(rownames(gene_loc), rownames(expr))
+# gene_loc <- gene_loc[!row.names(gene_loc) %in% h, ]
+
+# Prepare covariate file
+cov <- read.table("covariates-3.txt", sep = "\t", header = TRUE, row.names = 1)
+cov$arg11B.11 <- NULL
+cov$btm7B.14.Aligned.sortedByCoord.out.bam <- NULL
+cov$btm5.1.Aligned.sortedByCoord.out.bam <- NULL
+names(cov) <- names(expr)
+
+# Write snps, loci, and datasets into file
+write.table(snps, file = "eQTL_snps.txt", sep = "\t", quote = FALSE)
+write.table(snp_loc, file = "snp_loc.txt", sep = "\t", quote = FALSE)
+write.table(expr, file = "expr_residuals.txt", sep = "\t", quote = FALSE)
+write.table(gene_loc, file = "gene_loc.txt", quote = FALSE)
+write.table(cov, file = "covariates.txt", sep = "\t", quote = FALSE)
+
+#brook stopped here
+
+# Location of the package with the data files.
+base.dir = find.package('MatrixEQTL')
+base.dir = './'
+
+# Settings
+useModel = MatrixEQTL::modelLINEAR
+
+# Genotype file name
+SNP_file_name = paste(base.dir, "eQTL_snps.txt", sep = "")
+snps_location_file_name = paste(base.dir, "snp_loc.txt", sep = "")
+
+# Gene expression file name
+expression_file_name = paste(base.dir, "expr_residuals.txt", sep = "")
+gene_location_file_name = paste(base.dir, "gene_loc.txt", sep = "")
+
+# Covariates file name
+covariates_file_name = paste(base.dir, "covariates.txt", sep = "")
+
+# Output file name
+output_file_name_cis = tempfile()
+output_file_name_tra = tempfile()
+
+# Only associations significant at this level will be saved
+pvOutputThreshold_cis = 2e-3
+pvOutputThreshold_tra = 1e-3
+
+# Error covariance matrix
+errorCovariance = numeric()
+
+# Distance for local gene-SNP pairs
+cisDist = 1e6
+
+# Load genotype data
+snps = MatrixEQTL::SlicedData$new()
+snps$fileDelimiter = "\t"       # the TAB character
+snps$fileOmitCharacters = "NA"  # denote missing values;
+snps$fileSkipRows = 1           # one row of column labels
+snps$fileSkipColumns = 1        # one column of row labels
+snps$fileSliceSize = 2000       # read file in slices of 2,000 rows
+snps$LoadFile(SNP_file_name)
+
+# Load gene expression data
+gene = MatrixEQTL::SlicedData$new()
+gene$fileDelimiter = "\t"       # the TAB character
+gene$fileOmitCharacters = "NA"  # denote missing values;
+gene$fileSkipRows = 1           # one row of column labels
+gene$fileSkipColumns = 1        # one column of row labels
+gene$fileSliceSize = 2000       # read file in slices of 2,000 rows
+gene$LoadFile(expression_file_name)
+
+# Load covariates
+cvrt = MatrixEQTL::SlicedData$new()
+cvrt$fileDelimiter = "\t"       # the TAB character
+cvrt$fileOmitCharacters = "NA"  # denote missing values;
+cvrt$fileSkipRows = 1           # one row of column labels
+cvrt$fileSkipColumns = 1        # one column of row labels
+if(length(covariates_file_name) > 0) {
+  cvrt$LoadFile(covariates_file_name)
+}
+
+# Remove SNPs with low MAF
+maf.list = vector('list', length(snps))
+for(sl in 1:length(snps)) {
+  slice = snps[[sl]]
+  maf.list[[sl]] = rowMeans(slice, na.rm = TRUE) / 2
+  maf.list[[sl]] = pmin(maf.list[[sl]], 1 - maf.list[[sl]])
+ }
+ maf = unlist(maf.list)
+
+# Verify length of maf vector
+ cat('Length of MAF vector:', length(maf), '\n')
+ cat('Number of rows in SNPs:', nrow(snps), '\n')
+
+# Check distribution of MAF
+hist(maf)
+
+# Filter maf values greater than 0.05
+# filtered_maf <- maf[maf < 0.1]
+
+# Plot histogram with appropriate breaks
+# hist(filtered_maf, breaks = seq(0.1, max(filtered_maf), length.out = 100),
+#     main = "Filtered MAF Histogram", xlab = "maf", col = "gray")
+
+# hist(maf[maf < 0.05], seq(0, 0.05, length.out = 100))
+
+# Filter SNPs by MAF
+cat('SNPs before filtering:', nrow(snps), '\n')
+# snps$RowReorder(maf > 0.05)
+snps$RowReorderSimple(maf > 0.1)
+cat('SNPs after filtering:', nrow(snps), '\n')
+ 
+ # Remove outliers
+ #for( sl in 1:length(gene) ) {
+ # mat = gene[[sl]];
+ # mat = t(apply(mat, 1, rank, ties.method = "average"));
+ # mat = qnorm(mat / (ncol(gene)+1));
+ # gene[[sl]] = mat;
+# }
+# rm(sl, mat);
+
+# Load SNP and gene positions
+snpspos = read.table(snps_location_file_name, header = TRUE, stringsAsFactors = FALSE)
+genepos = read.table(gene_location_file_name, header = TRUE, stringsAsFactors = FALSE)
+
+# Run the analysis
+me = MatrixEQTL::Matrix_eQTL_main(
+  snps = snps,
+  gene = gene,
+  cvrt = cvrt,
+  output_file_name = output_file_name_tra,
+  pvOutputThreshold = pvOutputThreshold_tra,
+  useModel = useModel,
+  errorCovariance = errorCovariance,
+  verbose = TRUE,
+  output_file_name.cis = output_file_name_cis,
+  pvOutputThreshold.cis = pvOutputThreshold_cis,
+  snpspos = snpspos,
+  genepos = genepos,
+  cisDist = cisDist,
+  pvalue.hist = "qqplot",
+  min.pv.by.genesnp = FALSE,
+  noFDRsaveMemory = FALSE
+)
+
+unlink(output_file_name_tra)
+unlink(output_file_name_cis)
+
+# Results:
+cat('Analysis done in: ', me$time.in.sec, ' seconds', '\n')
+cat('Detected local eQTLs:', '\n')
+show(me$cis$eqtls)
+cat('Detected distant eQTLs:', '\n')
+show(me$trans$eqtls)
+
+trans_eQTL <- me$trans$eqtls
+trans_eQTL2 <- trans_eQTL %>% filter(FDR < 0.01)
+
+# Get eQTLs and eGenes
+# trans_eQTL <- read.table("/project/umb_brook_moyers/argo_network/trans_eQTL.txt",sep="\t",
+#                                      header=T,row.names=NULL, fill=TRUE) 
+
+# Get eGenes and eQTLs
+eGenes <- data.frame(unique(trans_eQTL2$gene))
+write.table(eGenes, file = "eGenes.txt")
+
+eQTLs <- data.frame(unique(trans_eQTL2$snps))
+write.table(eQTLs, file = "eQTLs.txt")
+
+# Extract eQTL and eGenes positions
+eQTL_positions <- snpspos %>%
+  filter(snps %in% trans_eQTL2$snps) %>%
+  distinct()
+
+eQTL_positions$snps <- NULL
+
+write.table(eQTL_positions, file = "eQTL_position2.txt", sep = "\t", quote = F, row.names = F)
+
+eGenes_positions <- genepos %>%
+  filter(Geneid %in% trans_eQTL2$gene) %>%
+  distinct() 
+
+eGenes_positions$Geneid <- NULL
+
+write.table(eGenes_positions, file = "eGenes_position2.txt", sep = "\t", quote = F, row.names = F)
+
+eGenes <- data.frame(trans_eQTL2$gene) 
+
+eGenes <- eGenes %>%
+  separate(trans_eQTL2.gene, into = c("Gene_ID", "ID", NA)) %>%
+  distinct()
+
+eGenes$Gene_ID <- NULL
+
+# Genes with sufficient expression
+suff_gene <- data.frame(row.names(expr))
+
+suff_gene <- suff_gene %>%
+  separate(row.names.expr., into = c("NA", "Gene_ID")) %>%
+  distinct(Gene_ID, .keep_all = TRUE)
+suff_gene$`NA` <- NULL
+
+write.table(suff_gene, file = "../network_analysis/all_genes_eQTL.txt", sep = "\t", quote = FALSE)
+
+length(unique(suff_gene$Gene_ID)) # 42638
+
+
+# Genes with significant eQTL associations = 3128
+eGenes$Gene_ID <- NULL
+write.table(eGenes, file = "eGenes.txt", sep = "\t", quote = F, row.names = F)
+
+
+```
+
+
