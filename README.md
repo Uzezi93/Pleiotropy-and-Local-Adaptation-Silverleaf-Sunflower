@@ -1,1 +1,4 @@
-# Pleiotropy_and_Local_Adaptation
+# Pleiotropy does not facilitate local adaptation in the silverleaf sunflower Helianthus argophyllus
+
+Local adaptation involves changes in population phenotypes that enhance survival or reproduction in specific environments. While pleiotropy, the control of multiple traits by a single gene, is often thought to hinder local adaptation, recent revisions to Fisher's theory suggest pleiotropic loci can drive adaptation when phenotypes are far from optimal. In this study, we examined the role of pleiotropy in local adaptation in *Helianthus argophyllus*, the Texas endemic Silverleaf sunflower. Populations of H. argophyllus exhibit bimodal life history strategies, with tall, late-flowering and short, early-flowering forms coexisting in close proximity. We hypothesized that local adaptation in these populations is influenced by highly pleiotropic genes. Using spatial selection analysis, selective sweeps, and tests for adaptation signatures, we found that candidate locally adapted genes had significantly lower connectivity and less central roles in gene coexpression networks compared to non-adapted genes.
+

@@ -1,0 +1,2 @@
+ID	Description	GeneRatio	BgRatio	pvalue	p.adjust	qvalue	geneID	Count
+M00039	M00039	Monolignol biosynthesis, phenylalanine/tyrosine => monolignol	6/6	124/2043	0.0000000445432112168438	0.0000000445432112168438	NA	110941603/110941600/110941973/110943793/110941922/110873433	6

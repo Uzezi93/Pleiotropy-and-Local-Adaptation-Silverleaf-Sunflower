@@ -1,0 +1,785 @@
+---
+title: "WGCNA"
+output: html_document
+date: "2023-09-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries}
+
+library(WGCNA)
+library(tidyverse)
+library(magrittr) 
+library(DESeq2)
+library(genefilter)      # <= why is this here?
+library(rstatix)
+library(reshape)
+library(igraph)
+```
+
+
+```{r load data}
+
+# Load and clean data
+expr <- read.table("counts.txt",sep="\t",header=TRUE,stringsAsFactors=F)
+
+# Examine dataset
+str(expr)
+
+# Convert count data to integers.
+expr[, -c(1:6)] <- lapply(expr[, -c(1:6)], as.integer)
+
+# Remove duplicate rows
+expr <- expr %>% dplyr::distinct()
+
+# backup original names
+# orig_names <- names(counts) # keep a back-up copy of the original names
+
+# Change names
+names(expr)[7:33] <- c("Ames449", "Ames695", "arg11B-11", "arg14B-7", "ARG1805", "ARG1820", "ARG1834", "arg2B-4", "arg4B-8", "arg6B-1", "btm10-5", "btm13-4", "btm17-4", "btm19-1", "btm20-8", "btm21-4", "btm22-8", "btm25-2", "btm26-4", "btm27-3", "btm30-6", "btm31-6", "btm32-3", "btm34-6", "btm5-1", "btm7B-14", "btm9-4")
+
+# Examine new manipulated data
+str(expr)
+
+# Remove genebank accessions
+expr$Ames449 <- NULL
+expr$Ames695 <- NULL
+expr$ARG1805 <- NULL
+expr$ARG1820 <- NULL
+expr$ARG1834 <- NULL
+
+## exclude the columns without read counts (columns 1 to 6 contain additional
+## info such as genomic coordinates)
+expr <- expr[ , -c(2:6)]
+head(expr)
+str(expr)
+
+# Examine data before normalization
+col_sel = names(expr)[-1]     # Get all but first column name
+mdata <- expr %>%
+  tidyr::pivot_longer(
+    .,                        # The dot is the the input data, magrittr tutorial
+    col = all_of(col_sel)
+    ) 
+
+# ==== Plot groups (Sample Groups vs RNA Seq Counts) to identify outliers
+ p <- mdata %>%
+    ggplot(., aes(x = name, y = value)) +             # x = treatment, y = RNA Seq count
+    geom_violin() +                                   # violin plot, show distribution
+    geom_point(alpha = 0.2) +                         # scatter plot
+    theme_bw() +
+    theme(
+      axis.text.x = element_text(angle = 90)          # Rotate treatment text
+    ) +
+  ylim(0, NA) +
+  labs(
+    title = "Before Normalization",
+    x = "samples",
+    y = "RNA seq counts"
+  )
+ 
+```
+
+
+```{r running Deseq2}
+
+de_input = as.matrix(expr[,-1])
+row.names(de_input) = make.names(expr$Geneid, unique = TRUE)
+de_input[1:5,1:10]
+str(de_input)
+
+meta_df <- data.frame( Sample = names(expr[-1])) %>%
+  mutate(
+    Type = gsub("-.*","", Sample) %>% gsub("[.].*","", .)
+  ) %>%
+  mutate(Condition = c("South Inland", "North Inland", "North Inland", "North Inland", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "South Inland", "South Inland", "Coastal"))
+
+meta_df$Sample <- NULL
+names(meta_df) <- c("samples", "population")
+
+dds <- DESeqDataSetFromMatrix(round(de_input),
+                              meta_df,
+                              design = ~population)
+
+dds <- DESeq(dds)
+
+vsd <- varianceStabilizingTransformation(dds)
+
+wpn_vsd <- getVarianceStabilizedData(dds)
+rv_wpn <- rowVars(wpn_vsd)
+summary(rv_wpn)
+
+q75_wpn <- quantile( rowVars(wpn_vsd), .75)  # <= original
+q95_wpn <- quantile( rowVars(wpn_vsd), .95)  # <= changed to 95 quantile to reduce dataset
+
+expr_normalized <- wpn_vsd[ rv_wpn > q95_wpn, ]
+
+expr_normalized[1:5,1:10]
+dim(expr_normalized)
+
+write.table(expr_normalized, file = "normalized_readcounts.txt", sep = "\t", quote = FALSE, row.names = T)
+
+expr_normalized_df <- data.frame(expr_normalized) %>%
+  mutate(
+    Gene_id = row.names(expr_normalized)
+  ) %>%
+  pivot_longer(-Gene_id)
+
+expr_normalized_df %>% ggplot(., aes(x = name, y = value)) +
+  geom_violin() +
+  geom_point() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text( angle = 90)
+  ) +
+  ylim(0, NA) +
+  labs(
+    title = "Normalized and 95 quantile Expression",
+    x = "samples",
+    y = "normalized expression"
+  )
+
+```
+```{r get input file for GO and KEGG analyses}
+
+dds2 <- DESeqDataSetFromMatrix(round(de_input),
+                              meta_df,
+                              design = ~population)
+
+dds2 = estimateSizeFactors(dds2)
+dds2 = estimateDispersions(dds2)
+plotDispEsts(dds2)
+dds2 <- DESeq(dds2)
+
+res <- DESeq2::results(dds2)
+head(res)
+
+sum(res$padj < 0.05, na.rm=T)
+
+res <- res %>%
+  na.omit() 
+
+write.table(res, file = "/project/pi_brook_moyers_umb_edu/Uzezi_argo/enrichment_analysis/20240301_HanXRQr2.0-20180814.vs.Ha412HOv2.0-20181130/Deseq_result.txt", sep = "\t", quote = FALSE)
+
+
+
+```
+
+
+```{r run WGCNA}
+
+expr_normalized <- read.table("normalized_readcounts.txt")
+
+input_mat = t(expr_normalized)
+
+input_mat[1:5,1:10]           # Look at first 5 rows and 10 columns
+
+allowWGCNAThreads()          # allow multi-threading (optional)
+
+# Choose a set of soft-thresholding powers
+powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
+
+# Call the network topology analysis function
+sft = pickSoftThreshold(
+  input_mat,             # <= Input data
+  #blockSize = 30,
+  powerVector = powers,
+  verbose = 5
+  )
+
+# Plot threshold
+par(mfrow = c(1,2));
+cex1 = 0.9;
+
+{plot(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     xlab = "Soft Threshold (power)",
+     ylab = "Scale Free Topology Model Fit, signed R^2",
+     main = paste("Scale independence")
+)
+text(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     labels = powers, cex = cex1, col = "red"
+)
+abline(h = 0.90, col = "red")}
+{plot(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     xlab = "Soft Threshold (power)",
+     ylab = "Mean Connectivity",
+     type = "n",
+     main = paste("Mean connectivity")
+)
+text(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     labels = powers,
+     cex = cex1, col = "red")}
+
+
+# I picked a threshold of 8 based Mean connectivity and Scale dependence curves
+
+picked_power = 9
+temp_cor <- cor       
+cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
+netwk <- blockwiseModules(input_mat,                # <= input here
+
+                          # == Adjacency Function ==
+                          power = picked_power,                # <= power here
+                          networkType = "signed",
+
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 30,
+                          maxBlockSize = 4000,
+
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          saveTOMs = T,
+                          saveTOMFileBase = "ER",
+
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+
+# View network modules
+
+# Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+
+netwk$colors[netwk$blockGenes[[1]]]
+table(netwk$colors)
+
+```
+
+```{r adjacency}
+
+adjacency = adjacency(expr_normalized, power=6, type="signed")
+adjacency[adjacency < 0] = 0
+adjacency[adjacency > 1] = 1
+TOM = TOMsimilarity(adjacency, TOMType="signed")
+adj <- TOM
+adj[adj > 0.1] = 1
+adj[adj != 1] = 0
+network <- graph.adjacency(adj)
+network <- simplify(network)  # removes self-loops
+results <- blockwiseModules(expr_normalized, power=6, TOMType="signed", networkType="signed")
+V(network)$color <- results$colors
+par(mar=c(0,0,0,0))
+# remove unconnected nodes
+network <- delete.vertices(network, degree(network)==0)
+plot(network, layout=layout.fruchterman.reingold(network), edge.arrow.size = 0.2)
+
+adj2 <- data.frame(adjacency)
+
+```
+
+```{r relate network module to populations}
+
+# Pull out the list of all the modules
+module_df <- data.frame(
+  gene_id = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+module_df[1:5,]
+
+write_delim(module_df,
+            file = "gene_modules.txt",
+            delim = "\t")
+
+
+# Identify genes related to different subpopulations
+# Get Module Eigengenes per cluster
+MEs0 <- moduleEigengenes(input_mat, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+MEs0 <- orderMEs(MEs0)
+module_order = names(MEs0) %>% gsub("ME","", .)
+
+# Add population names
+MEs0$population = c("South Inland", "North Inland", "North Inland", "North Inland", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "South Inland", "South Inland", "Coastal")
+
+# tidy & plot data
+mME = MEs0 %>%
+  filter(population %in% c("North Inland", "Coastal")) %>%
+  pivot_longer(-population) %>%
+  mutate(
+    name = gsub("ME", "", name),
+    name = factor(name, levels = module_order)
+  )
+
+mME %>% ggplot(., aes(x=population, y=name, fill=value)) +
+  geom_tile() +
+  theme_bw() +
+  scale_fill_gradient2(
+    low = "blue",
+    high = "red",
+    mid = "white",
+    midpoint = 0,
+    limit = c(-1,1)) +
+  theme(axis.text.x = element_text(angle=90)) +
+  labs(title = "Module-Population Relationships", y = "Modules", fill="corr")
+```
+
+```{r examine module expression profiles amongst populations}
+
+# I picked gene module with stark differences in correlation between coastal and north inland samples
+
+# pick out a few modules of interest here
+modules_of_interest = c("yellow", "steelblue", "orangered4")
+
+# Pull out list of genes in that module
+submod = module_df %>%
+  subset(colors %in% modules_of_interest)
+
+row.names(module_df) = module_df$gene_id
+
+# Get normalized expression for those genes
+expr_normalized[1:5,1:10]
+
+subexpr = expr_normalized[submod$gene_id,]
+
+submod_df = data.frame(subexpr) %>%
+  mutate(
+    gene_id = row.names(.)
+  )
+
+names(submod_df) <- c("South Inland", "North Inland", "North Inland", "North Inland", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "South Inland", "South Inland", "Coastal", "gene_id")
+
+submod_df <- submod_df %>%
+  pivot_longer(-gene_id) %>%
+  filter(name %in% c("North Inland", "Coastal")) %>%
+  mutate(
+    module = module_df[gene_id,]$colors
+  )
+
+submod_df %>% ggplot(., aes(x=name, y=value, fill=module)) +
+  geom_boxplot() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  labs(x = "population",
+       y = "normalized expression")
+
+
+```
+
+
+```{r estimate proportion of outlier genes in all modules}
+
+# Estimate proportion of LFMM and PCAdapt outliers in each module
+lfmm_genes <- read.table("../argo_plots/lfmm_genes.txt") %>%
+  select(V3) %>%
+  separate(V3, into = c("name", "gene")) %>%
+  filter(!gene %in% c("", "prime")) %>%
+  dplyr::select(gene) %>%
+  distinct()
+
+pcadapt_genes <- read.table("../argo_plots/pcadapt_genes.txt") %>%
+  select(V3) %>%
+  separate(V3, into = c("name", "gene")) %>%
+  filter(!gene %in% c("", "prime")) %>%
+  dplyr::select(gene) %>%
+  distinct()
+
+modules <- module_df %>%
+  separate(gene_id, into = c("name", "gene")) %>%
+  filter(!gene %in% c("", "prime")) %>%
+  dplyr::select(gene, colors) %>%
+  distinct() 
+
+outliers <- unique(cbind(lfmm_genes$gene, pcadapt_genes$gene))
+
+# Get the count of outlier genes in each module
+outlier_count <- tibble(letters = modules$gene, count = unlist(map(modules$gene, function(x) sum(outliers %in% x))))
+colnames(outlier_count)[2] <- "outliers"
+
+outlier_count2 <- data.frame(cbind(outlier_count$letters, outlier_count$outliers, modules$colors))
+names(outlier_count2) <- c("genes", "outlier", "colors")
+
+# Get proportion of outlier genes in all modules in descending order 
+outlier_count3 <- outlier_count2 %>%
+  dplyr::group_by(colors) %>%
+  dplyr::mutate(module_size =n()) %>%
+  dplyr::filter(!outlier %in% c("0")) %>%
+  dplyr::mutate_at(c("outlier"), as.numeric) %>%#group by both variables
+  dplyr::group_by(colors) %>% #count members per group
+  #dplyr::mutate(non_outlier = module_size - outlier) %>%
+  dplyr::summarise(n_outliers = sum(outlier),
+                   n_module_size = sum(module_size)) %>%
+  dplyr::mutate(non_outlier = (n_module_size - n_outliers)) %>%
+  dplyr::mutate(p_outlier = (n_outliers/n_module_size),
+                p_non_outlier = (non_outlier/n_module_size)) #%>%
+  # dplyr::select(colors, p_outlier, p_non_outlier)
+
+# Conduct fisher test for outlier genes modules
+write.table(`row.names<-`(do.call(rbind, lapply(seq(nrow(outlier_count3)), function(i) {
+  f <- fisher.test(matrix(c(outlier_count3$n_outliers[i], sum(outlier_count3$n_outliers[-i]),
+                            outlier_count3$non_outlier[i], sum(outlier_count3$non_outlier[-i])), nrow = 2));
+  data.frame(Element = outlier_count3$colors[i],
+             "odds ratio" = f$estimate, "p value" = scales::pvalue(f$p.value),
+             "Lower CI" = f$conf.int[1], "Upper CI" = f$conf.int[2],
+             check.names = FALSE)
+})), NULL), file = "module_fisher_test.txt", sep = "\t")
+
+fisher <- read.table("module_fisher_test.txt") %>%
+  mutate(n_genes_per_mod <- outlier_count3$n_module_size) %>%
+  filter(p.value %in% "<0.001") %>%
+  arrange(desc(odds.ratio))
+
+names(fisher)[6] <- "module_size"
+
+write.table(fisher, file = "odd_ratios_gene_modules", sep = "\t", quote = F, row.names = F)
+
+# Select modules with p value < 0.001 and higher odd ratios for visualization on cytoscape
+modules_of_interest <- fisher$Element[1:3]
+
+# Pull out list of genes in that module
+submod = module_df %>%
+  subset(colors %in% modules_of_interest)
+
+row.names(module_df) = module_df$gene_id
+
+# Get normalized expression for those genes
+expr_normalized[1:5,1:10]
+
+subexpr = expr_normalized[submod$gene_id,]
+
+submod_df = data.frame(subexpr) %>%
+  mutate(
+    gene_id = row.names(.)
+  )
+
+names(submod_df) <- c("South Inland", "North Inland", "North Inland", "North Inland", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "Coastal", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "North Inland", "South Inland", "South Inland", "Coastal", "gene_id")
+
+submod_df <- submod_df %>%
+  pivot_longer(-gene_id) %>%
+  filter(name %in% c("North Inland", "Coastal")) %>%
+  mutate(
+    module = module_df[gene_id,]$colors
+  )
+
+submod_df %>% ggplot(., aes(x=name, y=value, fill=module)) +
+  geom_boxplot() +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  ) +
+  labs(x = "population",
+       y = "normalized expression")
+
+
+purple_module <- module_df %>%
+  filter(colors %in% c("mediumpurple3"))
+
+cyan_module <- module_df %>%
+  filter(colors %in% c("lightcyan1"))
+
+write.table(purple_module, file = "purple.txt", sep = "\t")
+write.table(cyan_module, file = "cyan_module.txt", sep = "\t")
+
+
+```
+
+```{r generate and export networks}
+
+genes_of_interest = module_df %>%
+  subset(colors %in% modules_of_interest)
+
+expr_of_interest = expr_normalized[genes_of_interest$gene_id,]
+expr_of_interest[1:5,1:5]
+
+# Only recalculate TOM for modules of interest (faster, altho there's some online discussion if this will be slightly off)
+TOM = TOMsimilarityFromExpr(t(expr_of_interest),
+                            power = 6)
+
+# Add gene names to row and columns # I used the WGCNA cyt function to get my edgelist instead. It seems more straightforward.
+
+row.names(TOM) = row.names(expr_of_interest)
+colnames(TOM) = row.names(expr_of_interest)
+
+edge_list = data.frame(TOM) %>%
+  mutate(
+    gene1 = row.names(.)
+  ) %>%
+  pivot_longer(-gene1) %>%
+  dplyr::rename(gene2 = name, correlation = value) %>%
+  unique() %>%
+  subset(!(gene1==gene2)) %>%
+  mutate(
+    module1 = module_df[gene1,]$colors,
+    module2 = module_df[gene2,]$colors
+  ) 
+
+head(edge_list)
+
+# Export Network file to be read into Cytoscape, VisANT, etc
+write_delim(edge_list,
+            file = "edgelist.tsv",
+            delim = "\t")
+
+# Get adjacency matrix for connectivity plot
+connectivity <- softConnectivity(
+  input_mat, 
+  corFnc = "cor",
+  weights = NULL,
+  type = "signed",
+  power = 6, 
+  blockSize = 1500, 
+  minNSamples = NULL, 
+  verbose = 2, indent = 0)
+
+connectivity <- data.frame(cbind(rownames(expr_normalized), connectivity))
+write.table(connectivity, file = "connectivity.txt", quote = F, row.names = F, sep = "\t")
+
+```
+
+
+```{r plot connectivity}
+
+connectivity <- read.table("connectivity.txt", header = T)
+names(connectivity) <- c("focal_gene", "connectivity")
+connectivity2 <- connectivity %>%
+  separate(focal_gene, into = c("name", "gene")) %>%
+  select(gene, connectivity) %>%
+  distinct()
+  
+# Get LFMM, PCAdapt, eQTL, eGene, and Control genes and connectivity values
+lfmm_genes <- read.table("../argo_plots/lfmm_genes.txt") %>%
+  select(V3) %>%
+  separate(V3, into = c("name", "gene")) %>%
+  filter(!gene %in% c("", "prime")) %>%
+  select(gene) %>%
+  distinct()
+
+#write.table(lfmm_genes, file = "/project/umb_brook_moyers/argo_network/lfmm_genes.txt", sep = "\t", quote = FALSE, row.names = F)
+
+lfmm_connectivity <- connectivity2 %>%
+  filter(gene %in% lfmm_genes$gene)
+write.table(lfmm_connectivity, file = "lfmm_connectivity.txt", sep = "\t", quote = FALSE, row.names = F)
+
+pcadapt_genes <- read.table("../argo_plots/pcadapt_genes.txt") %>%
+  select(V3) %>%
+  separate(V3, into = c("name", "gene")) %>%
+  filter(!gene %in% c("", "prime")) %>%
+  select(gene) %>%
+  distinct()
+
+# write.table(pcadapt_genes, file = "/project/umb_brook_moyers/argo_network/pcadapt_genes.txt", sep = "\t", quote = FALSE, row.names = F)
+
+pcadapt_connectivity <- connectivity2 %>%
+  filter(gene %in% pcadapt_genes$gene)
+write.table(pcadapt_connectivity, file = "pcadapt_connectivity.txt", sep = "\t", quote = FALSE, row.names = F)
+
+eQTL_genes <- read.table("../network_analysis/eQTL_genes2.txt") %>%
+  #select(V3) %>%
+  #separate(V3, into = c("name", "gene")) %>%
+  #filter(!gene %in% c("", "prime")) %>%
+  #select(gene) %>%
+  filter_all(all_vars(. != ".")) %>%
+  distinct()
+
+# write.table(eQTL_genes, file = "/project/umb_brook_moyers/argo_network/eQTL_genes.txt", sep = "\t", quote = FALSE, row.names = F)
+
+eQTL_connectivity <- connectivity2 %>%
+  filter(gene %in% eQTL_genes$V1)
+write.table(eQTL_connectivity, file = "eQTL_connectivity.txt", sep = "\t", quote = FALSE, row.names = F)
+
+eGene_genes <- read.table("../eQTL_analysis/eGenes.txt") %>%
+  #select(V3) %>%
+  #separate(V3, into = c("name", "gene")) %>%
+  #filter(!gene %in% c("", "prime")) %>%
+  #select(gene) %>%
+  filter_all(all_vars(. != ".")) %>%
+  distinct()
+
+#names(eGene_genes) <- "gene"
+# write.table(eGene_genes, file = "/project/umb_brook_moyers/argo_network/eGene_genes.txt", sep = "\t", quote = FALSE, row.names = F)
+
+eGene_connectivity <- connectivity2 %>%
+  filter(gene %in% eGene_genes$V1)
+write.table(eGene_connectivity, file = "eGene_connectivity.txt", sep = "\t", quote = FALSE, row.names = F)
+
+control_genes <- read.table("../network_analysis/control_genes2.txt") %>%
+  #select(V3) %>%
+  #separate(V3, into = c("name", "gene")) %>%
+  #filter(!gene %in% c("", "prime")) %>%
+  #select(gene) %>%
+  filter_all(all_vars(. != ".")) %>%
+  distinct()
+
+# write.table(control_genes, file = "/project/umb_brook_moyers/argo_network/control_genes.txt", sep = "\t", quote = FALSE, row.names = F)
+
+control_connectivity <- connectivity2 %>%
+  filter(!(gene %in% c(lfmm_genes$gene, pcadapt_genes$gene, eGene_genes$gene, eQTL_genes$gene)))
+
+
+write.table(control_connectivity, file = "control_connectivity.txt", sep = "\t", quote = FALSE, row.names = F)
+
+```
+
+
+```{r plot}
+
+# lfmm_connectivity <- read.table("lfmm_connectivity.txt")
+names(lfmm_connectivity) <- c("gene", "connectivity")
+
+# pcadapt_connectivity <- read.table("pcadapt_connectivity.txt")
+names(pcadapt_connectivity) <- c("gene", "connectivity")
+
+# eQTL_connectivity <- read.table("eQTL_connectivity.txt")
+names(eQTL_connectivity) <- c("gene", "connectivity")
+
+# eGene_connectivity <- read.table("eGene_connectivity.txt")
+names(eGene_connectivity) <- c("gene", "connectivity")
+
+# control_connectivity <- read.table("control_connectivity.txt")
+names(control_connectivity) <- c("gene", "connectivity")
+
+# Plot connectivity values for control and selectio  outliers
+eGene <- eGene_connectivity$connectivity
+eQTL <- eQTL_connectivity$connectivity
+LFMM <- lfmm_connectivity$connectivity
+PCAdapt <- pcadapt_connectivity$connectivity
+Control <- control_connectivity$connectivity
+data <- cbind(eGene, eQTL, LFMM, PCAdapt, Control)
+
+data <- data.frame(data) %>%
+  mutate_all(as.numeric) %>%
+  na.omit()
+
+
+data_long <- data %>%
+  gather(Method, connectivity) # %>%
+  #mutate(log_connectivity = log10(connectivity))
+
+data_long <- data_long[is.finite(data_long$connectivity), ]
+
+con_lfmm <- filter(data_long, Method == "LFMM")$connectivity
+con_pcad <- filter(data_long, Method == "PCAdapt")$connectivity
+con_control <- filter(data_long, Method == "Control")$connectivity
+wilcox.test(con_control, con_lfmm) # (p-value < 2.2e-16, Wilcoxon rank sum test) 
+wilcox.test(con_control, con_pcad) # (p-value = 0.0003006, Wilcoxon rank sum test) 
+wilcox.test(con_pcad, con_lfmm) # p-value < 2.2e-16
+
+# data3_long <- data3_long[is.finite(data3_long$FayH), ]
+
+m <- median(filter(data_long, Method == "Control")$connectivity)
+
+p <- data_long %>%
+  ggplot(aes(x=Method, y=connectivity, fill=Method)) +
+  geom_violin(adjust = 10) +
+  geom_boxplot(width = 0.1, fill = "white") +
+  geom_boxplot(width = 0.1, fill = "white") +
+  stat_compare_means(method = "wilcox.test", label = "p.signif",
+                     ref.group = "Control") +      # Add global p-value
+  # Pairwise comparison against reference    
+  scale_y_continuous(trans = 'log10') +
+  geom_hline(yintercept = m, color="black", alpha = 0.7) +
+  xlab(" ") +
+  ylab("In(connectivity)") +
+  ggtitle(" ") +
+  guides(fill = "none")
+
+# save(p, file = "connectivity_plot.RData")
+
+
+ggsave(plot=p, filename="connectivity.png", width=4, height=4)
+
+```
+
+```{r cytoscape}
+
+# Get edge list compatible with cytoscape. 
+cyt = exportNetworkToCytoscape(TOM,
+                               weighted = TRUE,
+                               threshold = 0,
+                               includeColNames = TRUE)
+
+cyt_edge <- data.frame(cyt$edgeData)
+
+# Save edge data for network visualization
+write.table(cyt_edge, file = "cyt_edge.tsv", sep = "\t")
+
+# Extract node data from WGCNA edge and node object and save for network visualization
+cyte_node <- data.frame(cyt$nodeData)
+write.table(cyte_node, file = "cyt_node.tsv", sep = "\t")
+
+
+# Select modules of interest from cytoscape data (I selected 2 modules with many nodes)
+
+ivory_module <- edge_list %>%
+  filter(module1 %in% c("ivory")) %>%
+  separate(gene1, into = c("gene", "gene1")) %>%
+  select(., c(gene1, gene2, correlation, module1, module2)) %>%
+  separate(gene2, into = c("gene", "gene2")) %>%
+  select(., c(gene1, gene2, correlation))
+
+ivory_module$direction <- "undirected"
+names(ivory_module) <- c("source", "target", "weight", "direction")
+write.table(ivory_module, file = "ivory_edge.tsv", sep = "\t", row.names = F, quote = F)
+
+
+lightsteelblue1_module <- edge_list %>%
+  filter(module1 %in% c("lightsteelblue1")) %>%
+  separate(gene1, into = c("gene", "gene1")) %>%
+  select(., c(gene1, gene2, correlation, module1, module2)) %>%
+  separate(gene2, into = c("gene", "gene2")) %>%
+  select(., c(gene1, gene2, correlation))
+
+lightsteelblue1_module$direction <- "undirected"
+names(lightsteelblue1_module) <- c("source", "target", "weight", "direction")
+write.table(lightsteelblue1_module, file = "lightsteelblue1_edge.tsv", sep = "\t", row.names = F, quote = F)
+
+steelblue_module <- edge_list %>%
+  filter(module1 %in% c("steelblue")) %>%
+  separate(gene1, into = c("gene", "gene1")) %>%
+  select(., c(gene1, gene2, correlation, module1, module2)) %>%
+  separate(gene2, into = c("gene", "gene2")) %>%
+  select(., c(gene1, gene2, correlation))
+
+steelblue_module$direction <- "undirected"
+names(steelblue_module) <- c("source", "target", "weight", "direction")
+write.table(steelblue_module, file = "steelblue_edge.tsv", sep = "\t", row.names = F, quote = F)
+
+# Get cytoscape attribute file for lfmm and pcadapt genes
+# combine lfmm and pcadapt gene lists
+
+# Get outlier attributes for orangred and mediumpurple modules
+# First clean up module data
+# Get outliers
+outliers <- append(lfmm_genes$gene, pcadapt_genes$gene)
+
+ivory_attribute <- modules %>%
+  filter(colors %in% "ivory") %>%
+  filter(gene %in% outliers)
+write.table(ivory_attribute, file = "ivory_attribute.tsv", sep = "\t", row.names = F, quote = F)
+ 
+lightsteelblue1_attribute <- modules %>%
+  filter(colors %in% "lightsteelblue1") %>%
+  filter(gene %in% outliers)
+write.table(lightsteelblue1_attribute, file = "lightsteelblue1_attribute.tsv", sep = "\t", row.names = F, quote = F)
+
+steelblue_attribute <- modules %>%
+  filter(colors %in% "steelblue") %>%
+  filter(gene %in% outliers)
+write.table(steelblue_attribute, file = "steelblue_attribute.tsv", sep = "\t", row.names = F, quote = F)
+
+```

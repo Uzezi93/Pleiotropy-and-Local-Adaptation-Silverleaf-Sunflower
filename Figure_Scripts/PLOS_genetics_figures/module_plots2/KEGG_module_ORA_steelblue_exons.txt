@@ -1,0 +1,2 @@
+ID	Description	GeneRatio	BgRatio	pvalue	p.adjust	qvalue	geneID	Count
+M00017	M00017	Methionine biosynthesis, aspartate => homoserine => methionine	1/2	12/2043	0.0117157892768741	0.0117157892768741	NA	110865347	1
