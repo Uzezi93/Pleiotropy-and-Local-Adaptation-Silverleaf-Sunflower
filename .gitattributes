@@ -1,0 +1,2 @@
+index.html filter=lfs diff=lfs merge=lfs -text
+README.html filter=lfs diff=lfs merge=lfs -text
