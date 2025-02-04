@@ -70,7 +70,7 @@ Gene co-expression networks were used to assess the pleiotropy of genes with sel
 <p style="margin-bottom: 5px;">
   <strong>Fig 4</strong>. Gene network connectivity at candidate adaptive genes.  Estimated connectivity of candidate adaptive genes, eGenes, and eQTLs compared to the transcriptome-wide control.  
   
---------------------------------------------------------------------------
+---------------------------------------------------------------------
 ### Annotation of adaptation loci and gene co-expression networks
 
 Gene overrepresentation analysis revealed significant enrichment of adaptive genes related to pollen recognition and protein serine/threonine kinase activity in both LFMM and PCAdapt genes. Gene network modules with more adaptive genes were involved in secondary metabolism pathways, including Alpha-Linolenic acid metabolism, Stilbenoid, diarylheptanoid, and gingerol biosynthesis, Carotenoid biosynthesis, Ether lipid metabolism, Histidine metabolism, and Glycerolipid metabolism.
