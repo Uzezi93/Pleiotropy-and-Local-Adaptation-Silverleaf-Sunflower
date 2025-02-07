@@ -1,2 +1,0 @@
-ID	Description	GeneRatio	BgRatio	pvalue	p.adjust	qvalue	geneID	Count
-M00026	M00026	Histidine biosynthesis, PRPP => histidine	2/2	14/2043	0.000043626189712561	0.000043626189712561	NA	110879249/110908327	2

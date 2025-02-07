@@ -1,3 +1,0 @@
-ID	Description	GeneRatio	BgRatio	pvalue	p.adjust	qvalue	geneID	Count
-M00075	M00075	N-glycan biosynthesis, complex type	3/5	13/2043	0.00000200055600730656	0.00000400111201461311	NA	110867343/110878366/110911252	3
-M00527	M00527	Lysine biosynthesis, DAP aminotransferase pathway, aspartate => lysine	2/5	14/2043	0.000431152638016306	0.000431152638016306	NA	110940144/110877823	2

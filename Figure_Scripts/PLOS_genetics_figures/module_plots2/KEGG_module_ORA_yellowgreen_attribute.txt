@@ -1,2 +1,0 @@
-ID	Description	GeneRatio	BgRatio	pvalue	p.adjust	qvalue	geneID	Count
-M00018	M00018	Threonine biosynthesis, aspartate => homoserine => threonine	1/1	13/2043	0.00636319138521768	0.00636319138521768	NA	110893661	1

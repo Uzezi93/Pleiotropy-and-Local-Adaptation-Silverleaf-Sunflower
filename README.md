@@ -20,13 +20,13 @@ PCA (Fig. 1A) and FST (mean FST = 0.21) showed some genetic differentiation betw
   <strong>B</strong>: Approximate admixture proportions for each sampled individual at three different levels of K.  
 </p>
 
-----------------------------------------------------------------------
+---------------------------------------------------------------------
 
 ### Selection scans
 
-Two methods, LFMM 2 and PCAdapt, were used to identify genetic regions associated with local adaptation in *Helianthus argophyllus*. LFMM 2 detects selection by analyzing environment-genotype associations, while PCAdapt identifies selection through population structure. In the LFMM model, population structure was controlled by four latent factors, and the main environmental variations were defined using the first five principal components (PCs) of 19 BIOCLIM variables, explaining 98.95% of the variation. The LFMM model identified 1,438 SNPs across 560 genes with selection signatures. The PCAdapt analysis found 4,968 SNPs across 1,122 genes as selection outliers. Ten SNPs in XX genes were identified by both methods, which was fewer than expected by chance. Genes with outlier SNPs from either method were considered candidates for local adaptation, while genes without outlier SNPs served as controls.
+Two methods, LFMM 2 and PCAdapt, were used to identify genetic regions driving local adaptation in <i>H. argophyllus</i>. LFMM 2 detected selection based on environment-genotype associations, while PCAdapt used population structure. LFMM analysis, controlling for K = 4 latent factors and using the first five BIOCLIM PCs as predictors, identified 1,438 SNPs across 560 genes as selection candidates. PCAdapt identified 4,968 SNPs across 1,122 genes. Only 12 SNPs in 10 genes overlapped between methods, fewer than expected by chance (p < 2.2e-16). Genes from both methods were considered candidates for local adaptation, while non-outlier genes formed the control group.
 
-----------------------------------------------------------------------
+---------------------------------------------------------------------
 
 ### Proportion of eQTLs and eGenes in selection outliers
 
@@ -40,11 +40,11 @@ To assess if selection outlier loci were more pleiotropic than control genes, as
   <strong>Fig 2</strong>. Proportion of eQTLs and eGenes in candidate adaptive genes identified by LFMM and PCAdapt methods compared to the control. Error bars were calculated at 95% bootstrapped CI.  
 </p>
 
-----------------------------------------------------------------------
+---------------------------------------------------------------------
 
 ### Evidence of selection at outlier loci
 
-Genetic differentiation, measured by FST, was significantly higher for LFMM outlier genes compared to control genes, while *Dxy* values were not significantly different. In contrast, PCAdapt outlier genes showed lower FST and higher Dxy than control genes, indicating distinct signatures between the two methods. Population mutation rate measures (*θπ* and *θW*) revealed that PCAdapt outlier genes in the north population had lower *θW* but no significant difference in θπ. In the coast population, PCAdapt outliers had significantly higher θπ. For LFMM outliers, θπ was higher in the north population but not significantly different in the coast population. LFMM outliers in the coast population had lower *θW* compared to controls. Further validation using *Fay and Wu's H* neutrality measure and the Composite Likelihood Ratio (CLR) test showed that outlier genes identified by both methods were significantly enriched for selective sweeps, with more negative *H* estimates compared to control genes. These results indicate that both LFMM and PCAdapt outlier genes are enriched for selective sweeps in both populations.
+Genetic differentiation, measured by FST, was significantly higher for LFMM outlier genes compared to control genes, while <i>Dxy</i> values were not significantly different. In contrast, PCAdapt outlier genes showed lower <i>FST</i> and higher <i>Dxy</i> than control genes, indicating distinct signatures between the two methods. Population mutation rate measures (<i>θπ</i> and <i>θW</i>) revealed that PCAdapt outlier genes in the north population had lower <i>θW</i> but no significant difference in θπ. In the coast population, PCAdapt outliers had significantly higher θπ. For LFMM outliers, <i>θπ</i> was higher in the north population but not significantly different in the coast population. LFMM outliers in the coast population had lower <i>θW</i> compared to controls. Further validation using Fay and Wu's <i>H</i> neutrality measure and the Composite Likelihood Ratio (CLR) test showed that outlier genes identified by both methods were significantly enriched for selective sweeps, with more negative <i>H</i> estimates compared to control genes. These results indicate that both LFMM and PCAdapt outlier genes are enriched for selective sweeps in both populations.
 
 <div style="display: flex; align-items: center; justify-content: space-between;">
   <img src="Figure_Scripts/PLOS_genetics_figures/FST_Dxy_plot.tiff" alt="FST" width="800" height="400" />
@@ -60,167 +60,124 @@ Genetic differentiation, measured by FST, was significantly higher for LFMM outl
   <strong>C</strong>: *Fay and Wu’s H* values across adaptive genes, eQTLs, eGenes, and the rest of the transcriptome. The horizontal line represents the median value of the transcriptome-wide background for all estimated values. 
 </p>
 
--------------------------------------------------------------------------
+---------------------------------------------------------------------
 
 ### Connectivity of selection outliers
 
-Gene co-expression networks were used to assess the pleiotropy of genes with selection outliers. The analysis identified 44 modules, with a median of 96 genes per module. Twenty-one modules contained more LFMM and PCAdapt genes than expected (p-value < 0.001, Fisher's exact test). The connectivity of candidate adaptive genes, eQTLs, and eGenes was examined, showing that PCAdapt outlier genes and eQTLs had higher connectivity than control genes (p-value < 2.2e-16). In contrast, LFMM outlier genes and eGenes had lower connectivity than control genes (p-value < 2.2e-16).
+Gene co-expression analysis identified 44 modules, with a median of 41 genes per module. Three modules were significantly enriched for LFMM genes, while no modules were enriched for PCAdapt genes or genes identified by both methods. Connectivity analysis revealed that PCAdapt outlier genes and eQTLs had higher connectivity than control genes (p < 2.2e-16), whereas LFMM outlier genes and eGenes were less connected than control genes (p < 2.2e-16).
 
 <img src="Figure_Scripts/PLOS_genetics_figures/connectivity_plot.tiff" alt="connectivity" width="400" height="400" />
 <p style="margin-bottom: 5px;">
   <strong>Fig 4</strong>. Gene network connectivity at candidate adaptive genes.  Estimated connectivity of candidate adaptive genes, eGenes, and eQTLs compared to the transcriptome-wide control.  
   
 ---------------------------------------------------------------------
+
 ### Annotation of adaptation loci and gene co-expression networks
 
-Gene overrepresentation analysis revealed significant enrichment of adaptive genes related to pollen recognition and protein serine/threonine kinase activity in both LFMM and PCAdapt genes. Gene network modules with more adaptive genes were involved in secondary metabolism pathways, including Alpha-Linolenic acid metabolism, Stilbenoid, diarylheptanoid, and gingerol biosynthesis, Carotenoid biosynthesis, Ether lipid metabolism, Histidine metabolism, and Glycerolipid metabolism.
+Our analysis revealed that adaptive genes were significantly enriched in pollen recognition and protein serine/threonine kinase activity across both LFMM and PCAdapt genes. LFMM genes were associated with sulfotransferase, catalase, and oxidoreductase activities, while PCAdapt genes were enriched in signal transduction, defense response, and dehydrogenase activity. Genes identified by both methods were linked to defense response, ADP binding, signal transduction, nuclear pore transport, and spliceosome activity. Additionally, WGCNA modules with an overrepresentation of LFMM genes were primarily involved in core metabolic pathways, including histidine biosynthesis, de novo purine biosynthesis, pyruvate oxidation, triacylglycerol biosynthesis, and leucine biosynthesis.
 
-<div style="display: flex; align-items: center; justify-content: space-between;">
-
+<div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
   <img src="Figure_Scripts/PLOS_genetics_figures/LFMM_gene_over_representation_barplot.tiff" alt="LFMM" width="400" />
   <img src="Figure_Scripts/PLOS_genetics_figures/PCAdapt_gene_over_representation_barplot.tiff" alt="PCAdapt" width="400" />
 </div>
 
+<div style="display: flex; justify-content: center; margin-top: 10px;">
+  <img src="Figure_Scripts/PLOS_genetics_figures/LFMM_PCAdapt_gene_over_representation_barplot.tiff" alt="PCAdapt" width="400" />
+</div>
+
 <p style="margin-bottom: 5px;">
-  <strong>Fig 5</strong>. Gene ontology enrichment for biological processes of adaptive genes identified by LFMM (left) and PCAdapt (right).
+  <strong>Fig 5</strong>. Gene ontology enrichment for biological processes of adaptive genes identified by LFMM (left), PCAdapt (right) and both LFMM and PCAdapt (bottom).
 </p> 
 
-<div style="margin-top: 20px;"> <!-- Added space before table -->
+<div style="clear: both; margin-top: 20px;"> <!-- Ensures table appears at the correct location -->
 
 <p style="margin-bottom: 20px;">
-  <strong>Table 1</strong>. Annotation of some network modules containing adaptive genes more than expected by chance. The table shows the most significant pathway for each analyzed network module.
+  <strong>Table 1</strong>. KEGG Module Annotation of the three network modules containing more than expected LFMM adaptive genes. 
 </p> 
 
-<div style="margin-top: 20px;"> <!-- Added space before table -->
-  <table border="1" cellpadding="5" cellspacing="0" style="width: 100%;">
-    <thead>
-      <tr>
-        <th style="width: 20%;">WGCNA Network Module</th>
-        <th style="width: 10%;">Size</th>
-        <th style="width: 15%;">KEGG ID</th>
-        <th style="width: 30%;">Description</th>
-        <th style="width: 25%;">p-value</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Turquoise</td>
-        <td>205437</td>
-        <td>han00592</td>
-        <td>Alpha-Linolenic acid metabolism</td>
-        <td>1.047E-13</td>
-      </tr>
-      <tr>
-        <td>Blue</td>
-        <td>128000</td>
-        <td>han00071</td>
-        <td>Fatty acid degradation</td>
-        <td>3.8487E-12</td>
-      </tr>
-      <tr>
-        <td>Ivory</td>
-        <td>17</td>
-        <td>han00945</td>
-        <td>Stilbenoid, diarylheptanoid, and gingerol biosynthesis</td>
-        <td>5.8774E-11</td>
-      </tr>
-      <tr>
-        <td>Red</td>
-        <td>640</td>
-        <td>han00906</td>
-        <td>Carotenoid biosynthesis</td>
-        <td>1.9047E-07</td>
-      </tr>
-      <tr>
-        <td>Greenyellow</td>
-        <td>207</td>
-        <td>han04144</td>
-        <td>Endocytosis</td>
-        <td>6.5565E-06</td>
-      </tr>
-      <tr>
-        <td>Dark grey</td>
-        <td>148</td>
-        <td>han00340</td>
-        <td>Histidine metabolism</td>
-        <td>1.2006E-05</td>
-      </tr>
-      <tr>
-        <td>Light yellow</td>
-        <td>96</td>
-        <td>han00592</td>
-        <td>Alpha-Linolenic acid metabolism</td>
-        <td>2.2602E-05</td>
-      </tr>
-      <tr>
-        <td>Black</td>
-        <td>640</td>
-        <td>han00190</td>
-        <td>Oxidative phosphorylation</td>
-        <td>0.00029138</td>
-      </tr>
-      <tr>
-        <td>Green</td>
-        <td>864</td>
-        <td>han00561</td>
-        <td>Glycerolipid metabolism</td>
-        <td>0.00062053</td>
-      </tr>
-      <tr>
-        <td>Pink</td>
-        <td>445</td>
-        <td>han03050</td>
-        <td>Proteasome</td>
-        <td>0.00062388</td>
-      </tr>
-      <tr>
-        <td>Brown</td>
-        <td>1340</td>
-        <td>han03013</td>
-        <td>Nucleocytoplasmic transport</td>
-        <td>0.00113196</td>
-      </tr>
-      <tr>
-        <td>Dark turquoise</td>
-        <td>306</td>
-        <td>han00230</td>
-        <td>Purine metabolism</td>
-        <td>0.00150759</td>
-      </tr>
-      <tr>
-        <td>Steelblue</td>
-        <td>32</td>
-        <td>han00565</td>
-        <td>Ether lipid metabolism</td>
-        <td>0.00426168</td>
-      </tr>
-      <tr>
-        <td>Yellow-green</td>
-        <td>81</td>
-        <td>han00750</td>
-        <td>Vitamin B6 metabolism</td>
-        <td>0.00574599</td>
-      </tr>
-      <tr>
-        <td>Yellow</td>
-        <td>1029</td>
-        <td>han04820</td>
-        <td>Cytoskeleton in muscle cells</td>
-        <td>0.00938716</td>
-      </tr>
-    </tbody>
-  </table>
-</div>
+<style>
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th {
+    background-color: darkgreen; /* Fills column titles with green */
+    color: white; /* Ensures text is readable */
+    padding: 10px;
+    border: 1px solid black;
+    text-align: left;
+  }
+  td {
+    border: 1px solid black;
+    padding: 10px;
+    text-align: left;
+  }
+</style>
 
-<div style="margin-top: 20px;"> <!-- Added space after table -->
-</div>
+<table>
+  <tr>
+    <th>WGCNA Module</th>
+    <th>KEGG ID</th>
+    <th>Description</th>
+    <th>Adjusted p value</th>
+  </tr>
+  <tr>
+    <td rowspan="2">Darkgrey</td>
+    <td>M00026</td>
+    <td>Histidine biosynthesis, PRPP => histidine</td>
+    <td>0.00063984</td>
+  </tr>
+  <tr>
+    <td>M00129</td>
+    <td>Ascorbate biosynthesis, glucose-1P => ascorbate</td>
+    <td>0.0014631</td>
+  </tr>
+  <tr>
+    <td rowspan="4">Darkturquoise</td>
+    <td>M00002</td>
+    <td>Glycolysis, core module involving three-carbon compounds</td>
+    <td>0.0006257</td>
+  </tr>
+  <tr>
+    <td>M00048</td>
+    <td>De novo purine biosynthesis, PRPP + glutamine => IMP</td>
+    <td>0.00117279</td>
+  </tr>
+  <tr>
+    <td>M00001</td>
+    <td>Glycolysis (Embden-Meyerhof pathway), glucose => pyruvate</td>
+    <td>0.00228412</td>
+  </tr>
+  <tr>
+    <td>M00130</td>
+    <td>Inositol phosphate metabolism, PI=> PIP2 => Ins(1,4,5)P3 => Ins(1,3,4,5)P4</td>
+    <td>0.00288918</td>
+  </tr>
+  <tr>
+    <td rowspan="3">Green</td>
+    <td>M00307</td>
+    <td>Pyruvate oxidation, pyruvate => acetyl-CoA</td>
+    <td>0.00107016</td>
+  </tr>
+  <tr>
+    <td>M00089</td>
+    <td>Triacylglycerol biosynthesis</td>
+    <td>0.00954748</td>
+  </tr>
+  <tr>
+    <td>M00432</td>
+    <td>Leucine biosynthesis, 2-oxoisovalerate => 2-oxoisocaproate</td>
+    <td>0.03465363</td>
+  </tr>
+</table>
 
+</div> <!-- Ensure this closes properly -->
 
 
 ### Methods
 
 - #### Sample Collection and RNA Sequencing
-The study used 19 populations of *Helianthus argophyllus* representing two subpopulations. Seeds were grown in a growth chamber for 3 weeks, and above-ground tissue was frozen for RNA extraction. RNA was sequenced using Illumina's mRNASeq approach on a GAII platform with paired-end sequencing.
+The study used 19 populations of <i>H. argophyllus</i> representing two subpopulations. Seeds were grown in a growth chamber for 3 weeks, and above-ground tissue was frozen for RNA extraction. RNA was sequenced using Illumina's mRNASeq approach on a GAII platform with paired-end sequencing.
 
 - #### Sequence Processing
 RNA-seq data were processed with FastQC, trimmed with Trimmomatic, and aligned to the H. annuus reference genome using STAR. Variants were called with Freebayes, filtered with vcftools, and quality control was applied using criteria for read quality, coverage, and missing data.

@@ -1,2 +1,0 @@
-ID	Description	GeneRatio	BgRatio	pvalue	p.adjust	qvalue	geneID	Count
-M00161	M00161	Photosystem II	1/1	12/2043	0.00587371512481638	0.00587371512481638	NA	110896250	1

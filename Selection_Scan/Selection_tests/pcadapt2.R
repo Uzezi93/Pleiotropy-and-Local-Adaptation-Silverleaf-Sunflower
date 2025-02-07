@@ -5,6 +5,7 @@ library(adegenet)
 # BiocManager::install("qvalue")
 library(qvalue)
 library(tidyverse)
+library(stringr)
 
 argo <- pcadapt::read.pcadapt("../network_analysis/plink/data_keep2.bed", type = "bed")
 
@@ -123,14 +124,42 @@ PCAdapt_loci <- colnames(outlier_SNPs) #4968 loci identified by PCAdapt
 # Save to .txt file for selection analysis
 cat(PCAdapt_loci, file = "PCAdapt.txt")
 
-
+#--------------------------------------------------------------------
 #  Compare LFMM, RDA and PCAdapt candidates ****
 c <- c(PCAdapt_loci, lfmm_loci) ## No common loci identified by all selection tests. 
 
-common_loci <- intersect(lfmm_loci, PCAdapt_loci) # 10 loci. 
+common_loci <- intersect(lfmm_loci, PCAdapt_loci) # 12 loci. 
 
-
+# Save common SNPs identified from both methods
 # create a dataframe for all identified lfmm regions
+common_regions <- data.frame(common_loci)
+
+# Split dataframe by ":" and "_" seperators
+common_regions <- str_split_fixed(common_regions$common_loci, "_", 2)
+common_regions <- str_split_fixed(common_regions[,1], ":", 2)
+common_regions1 <- data.frame(common_regions)
+
+# Extract all identified chromosomes
+chrom <- common_regions1$X1
+
+common_regions2 <- data.frame(do.call('rbind', strsplit(as.character(common_regions1$X2),'_',fixed=TRUE)))
+
+# Add all separated components into a single dataframe. 
+common_region_fin <- cbind(chrom, common_regions2)
+
+
+# Rename columns
+colnames(common_region_fin) <- c("chrm", "pos")
+
+# Save positions rowise. 
+write.table(common_region_fin, 
+            file = "../network_analysis/lfmm_pcadapt_common_pos.txt", 
+            row.names = FALSE, 
+            quote = FALSE,
+            sep = "\t")
+
+#--------------------------------------------------------------------
+# create a dataframe for all identified pcadapt regions
 pcadapt_regions <- data.frame(PCAdapt_loci)
 
 # load stringr library
@@ -159,10 +188,10 @@ write.table(pcadapt_region_fin,
             row.names = FALSE, 
             quote = FALSE)
 
-
+#--------------------------------------------------------------------
 # Fisher's exact test
 # Find common loci
-common_loci <- intersect(lfmm_loci, PCAdapt_loci) # 10 loci. 
+common_loci <- intersect(lfmm_loci, PCAdapt_loci) # 12 loci. 
 length_common <- length(common_loci)
 
 # Count loci

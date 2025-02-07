@@ -279,7 +279,7 @@ x <- data.frame(summary(pred.pca)$cont)
 y <- x %>%
   mutate_if(is.numeric, round, digits = 2)
 
-write.table(y, file = "BIOCLIM_PCs.txt", sep = "\t", quote = F)
+# write.table(y, file = "BIOCLIM_PCs.txt", sep = "\t", quote = F)
 
 screeplot(pred.pca, main = "Screeplot: Eigenvalues of Argo Predictor Variables")
 
@@ -506,11 +506,11 @@ argo.qv5 <- data.frame(argo.qv5)
 loci_and_qval5 <- argo.qv5 
 
 #----------------------------------------------------------------------------------
-lfmm_loci1 <- colnames(argo.FDR.1) #44
-lfmm_loci2 <- colnames(argo.FDR.2) #125
-lfmm_loci3 <- colnames(argo.FDR.3) #1271
-lfmm_loci4 <- colnames(argo.FDR.4) #15
-lfmm_loci5 <- colnames(argo.FDR.5) #138
+lfmm_loci1 <- argo.FDR.1@loc.names #32
+lfmm_loci2 <- argo.FDR.2@loc.names #162
+lfmm_loci3 <- argo.FDR.3@loc.names #1192
+lfmm_loci4 <- argo.FDR.4@loc.names #26
+lfmm_loci5 <- argo.FDR.5@loc.names #26
 
 lfmm_loci <- c(lfmm_loci1, lfmm_loci2, lfmm_loci3, lfmm_loci4, lfmm_loci5) #1438
 

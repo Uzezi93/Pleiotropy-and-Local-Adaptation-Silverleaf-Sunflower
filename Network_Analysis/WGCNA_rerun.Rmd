@@ -18,6 +18,8 @@ library(genefilter)      # <= why is this here?
 library(rstatix)
 library(reshape)
 library(igraph)
+library(purrr)
+library(scales)
 ```
 
 
@@ -399,54 +401,264 @@ pcadapt_genes <- read.table("../argo_plots/pcadapt_genes.txt") %>%
   dplyr::select(gene) %>%
   distinct()
 
-modules <- module_df %>%
+modules <- read.table("gene_modules.txt", header = T) %>%
   separate(gene_id, into = c("name", "gene")) %>%
   filter(!gene %in% c("", "prime")) %>%
   dplyr::select(gene, colors) %>%
   distinct() 
 
-outliers <- unique(cbind(lfmm_genes$gene, pcadapt_genes$gene))
+# Get the number of genes per module
+module_summary <- modules %>%
+  count(colors) %>%
+  arrange(desc(n))  # Sort in descending order
+colnames(module_summary) <- c("module", "gene_number")
+write.table(module_summary, file = "~/Pleiotropy-and-Local-Adaptation-Silverleaf-Sunflower/module_summary.txt", sep = "\t", quote = F, row.names = F)
+
+```
+
+```{r get modules with more than expected lfmm and pcadapt outliers}
+
+lfmm_outliers <- unique(lfmm_genes$gene)
 
 # Get the count of outlier genes in each module
-outlier_count <- tibble(letters = modules$gene, count = unlist(map(modules$gene, function(x) sum(outliers %in% x))))
-colnames(outlier_count)[2] <- "outliers"
+lfmm_count <- tibble(letters = modules$gene, count = unlist(map(modules$gene, function(x) sum(lfmm_outliers %in% x))))
+colnames(lfmm_count)[2] <- "outliers"
 
-outlier_count2 <- data.frame(cbind(outlier_count$letters, outlier_count$outliers, modules$colors))
-names(outlier_count2) <- c("genes", "outlier", "colors")
+lfmm_outlier_count2 <- data.frame(cbind(lfmm_count$letters, lfmm_count$outliers, modules$colors))
+names(lfmm_outlier_count2) <- c("genes", "outlier", "colors")
 
-# Get proportion of outlier genes in all modules in descending order 
-outlier_count3 <- outlier_count2 %>%
-  dplyr::group_by(colors) %>%
-  dplyr::mutate(module_size =n()) %>%
-  dplyr::filter(!outlier %in% c("0")) %>%
-  dplyr::mutate_at(c("outlier"), as.numeric) %>%#group by both variables
-  dplyr::group_by(colors) %>% #count members per group
-  #dplyr::mutate(non_outlier = module_size - outlier) %>%
-  dplyr::summarise(n_outliers = sum(outlier),
-                   n_module_size = sum(module_size)) %>%
-  dplyr::mutate(non_outlier = (n_module_size - n_outliers)) %>%
-  dplyr::mutate(p_outlier = (n_outliers/n_module_size),
-                p_non_outlier = (non_outlier/n_module_size)) #%>%
-  # dplyr::select(colors, p_outlier, p_non_outlier)
+# Get proportion of lfmm outlier genes in all modules
+lfmm_outlier_count3 <- lfmm_outlier_count2 %>%
+  group_by(colors) %>%
+  mutate(module_size = n()) %>%  # Count number of genes per module
+  filter(outlier != "0") %>%  # Keep only outliers
+  mutate(outlier = as.numeric(outlier)) %>%  # Convert outlier column to numeric
+  summarise(
+    n_outliers = sum(outlier),  # Total number of outliers in each module
+    n_module_size = first(module_size)  # Module size before filtering
+  ) %>%
+  mutate(
+    non_outlier = n_module_size - n_outliers,  # Calculate non-outliers
+    p_outlier = n_outliers / n_module_size,  # Proportion of outliers
+    p_non_outlier = non_outlier / n_module_size  # Proportion of non-outliers
+  )
 
-# Conduct fisher test for outlier genes modules
-write.table(`row.names<-`(do.call(rbind, lapply(seq(nrow(outlier_count3)), function(i) {
-  f <- fisher.test(matrix(c(outlier_count3$n_outliers[i], sum(outlier_count3$n_outliers[-i]),
-                            outlier_count3$non_outlier[i], sum(outlier_count3$non_outlier[-i])), nrow = 2));
-  data.frame(Element = outlier_count3$colors[i],
-             "odds ratio" = f$estimate, "p value" = scales::pvalue(f$p.value),
-             "Lower CI" = f$conf.int[1], "Upper CI" = f$conf.int[2],
-             check.names = FALSE)
-})), NULL), file = "module_fisher_test.txt", sep = "\t")
+# View the output
+print(lfmm_outlier_count3)
 
-fisher <- read.table("module_fisher_test.txt") %>%
-  mutate(n_genes_per_mod <- outlier_count3$n_module_size) %>%
-  filter(p.value %in% "<0.001") %>%
-  arrange(desc(odds.ratio))
+
+# Conduct Fisher's exact test for outlier gene modules
+fisher_results <- map_df(seq(nrow(lfmm_outlier_count3)), function(i) {
+  # Create a contingency table
+  contingency_table <- matrix(
+    c(
+      lfmm_outlier_count3$n_outliers[i], sum(lfmm_outlier_count3$n_outliers[-i]),
+      lfmm_outlier_count3$non_outlier[i], sum(lfmm_outlier_count3$non_outlier[-i])
+    ), 
+    nrow = 2
+  )
+  
+  # Perform Fisher's exact test
+  f <- fisher.test(contingency_table)
+  
+  # Store results in a dataframe
+  data.frame(
+    Element = lfmm_outlier_count3$colors[i],
+    Odds_Ratio = f$estimate,
+    P_Value = pvalue(f$p.value),
+    Lower_CI = f$conf.int[1],
+    Upper_CI = f$conf.int[2]
+  )
+})
+
+# Save results to file
+write.table(fisher_results, file = "lfmm_module_fisher_test.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+# Print results
+print(fisher_results)
+
+fisher <- read.table("lfmm_module_fisher_test.txt", header = TRUE) %>%
+  mutate(
+    P_Value = as.numeric(gsub(">", "", P_Value)),  # Remove ">" and convert to numeric
+    n_genes_per_mod = lfmm_outlier_count3$n_module_size
+  ) %>%
+  filter(P_Value < 0.05) %>%
+  arrange(desc(Odds_Ratio))
+
 
 names(fisher)[6] <- "module_size"
 
-write.table(fisher, file = "odd_ratios_gene_modules", sep = "\t", quote = F, row.names = F)
+write.table(fisher, file = "lfmm_odd_ratios_gene_modules", sep = "\t", quote = F, row.names = F)
+
+```
+
+```{r get modules with more than expected PCAdapt outliers}
+
+pcadapt_outliers <- unique(pcadapt_genes$gene)
+
+# Get the count of outlier genes in each module
+pcadapt_count <- tibble(letters = modules$gene, count = unlist(map(modules$gene, function(x) sum(pcadapt_outliers %in% x))))
+colnames(pcadapt_count)[2] <- "outliers"
+
+pcadapt_outlier_count2 <- data.frame(cbind(pcadapt_count$letters, pcadapt_count$outliers, modules$colors))
+names(pcadapt_outlier_count2) <- c("genes", "outlier", "colors")
+
+# Get proportion of outlier genes in all modules in descending order 
+pcadapt_outlier_count3 <- pcadapt_outlier_count2 %>%
+  group_by(colors) %>%
+  mutate(module_size = n()) %>%  # Count number of genes per module
+  filter(outlier != "0") %>%  # Keep only outliers
+  mutate(outlier = as.numeric(outlier)) %>%  # Convert outlier column to numeric
+  summarise(
+    n_outliers = sum(outlier),  # Total number of outliers in each module
+    n_module_size = first(module_size)  # Module size before filtering
+  ) %>%
+  mutate(
+    non_outlier = n_module_size - n_outliers,  # Calculate non-outliers
+    p_outlier = n_outliers / n_module_size,  # Proportion of outliers
+    p_non_outlier = non_outlier / n_module_size  # Proportion of non-outliers
+  )
+
+# View the output
+print(pcadapt_outlier_count3)
+
+
+# Conduct Fisher's exact test for outlier gene modules
+fisher_results <- map_df(seq(nrow(pcadapt_outlier_count3)), function(i) {
+  # Create a contingency table
+  contingency_table <- matrix(
+    c(
+      pcadapt_outlier_count3$n_outliers[i], sum(pcadapt_outlier_count3$n_outliers[-i]),
+      pcadapt_outlier_count3$non_outlier[i], sum(pcadapt_outlier_count3$non_outlier[-i])
+    ), 
+    nrow = 2
+  )
+  
+  # Perform Fisher's exact test
+  f <- fisher.test(contingency_table)
+  
+  # Store results in a dataframe
+  data.frame(
+    Element = pcadapt_outlier_count3$colors[i],
+    Odds_Ratio = f$estimate,
+    P_Value = pvalue(f$p.value),
+    Lower_CI = f$conf.int[1],
+    Upper_CI = f$conf.int[2]
+  )
+})
+
+# Save results to file
+write.table(fisher_results, file = "pcadapt_module_fisher_test.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+# Print results
+print(fisher_results)
+
+# There was no significant enrichment of any pcadapt gene in all modules
+
+```
+
+```{r get modules with more than expected lfmm and pcadapt outliers}
+
+# Check the enrichment of genes identified by both pcadapt and lfmm analysis in WGCNA network modules
+
+# Load genes identified by both methods
+intersected_genes <- read.table("lfmm_pcadapt_genes2.txt") %>%
+  distinct()
+
+intersected_outliers <- unique(intersected_genes$V1)
+
+# Get the count of outlier genes in each module
+intersected_count <- tibble(letters = modules$gene, count = unlist(map(modules$gene, function(x) sum(intersected_outliers %in% x))))
+colnames(intersected_count)[2] <- "outliers"
+
+intersected_outlier_count2 <- data.frame(cbind(intersected_count$letters, intersected_count$outliers, modules$colors))
+names(intersected_outlier_count2) <- c("genes", "outlier", "colors")
+
+# Get proportion of lfmm outlier genes in all modules
+intersected_outlier_count3 <- intersected_outlier_count2 %>%
+  group_by(colors) %>%
+  mutate(module_size = n()) %>%  # Count number of genes per module
+  filter(outlier != "0") %>%  # Keep only outliers
+  mutate(outlier = as.numeric(outlier)) %>%  # Convert outlier column to numeric
+  summarise(
+    n_outliers = sum(outlier),  # Total number of outliers in each module
+    n_module_size = first(module_size)  # Module size before filtering
+  ) %>%
+  mutate(
+    non_outlier = n_module_size - n_outliers,  # Calculate non-outliers
+    p_outlier = n_outliers / n_module_size,  # Proportion of outliers
+    p_non_outlier = non_outlier / n_module_size  # Proportion of non-outliers
+  )
+
+# View the output
+print(intersected_outlier_count3)
+
+
+# Conduct Fisher's exact test for outlier gene modules
+fisher_results <- map_df(seq(nrow(intersected_outlier_count3)), function(i) {
+  # Create a contingency table
+  contingency_table <- matrix(
+    c(
+      intersected_outlier_count3$n_outliers[i], sum(intersected_outlier_count3$n_outliers[-i]),
+      intersected_outlier_count3$non_outlier[i], sum(intersected_outlier_count3$non_outlier[-i])
+    ), 
+    nrow = 2
+  )
+  
+  # Perform Fisher's exact test
+  f <- fisher.test(contingency_table)
+  
+  # Store results in a dataframe
+  data.frame(
+    Element = lfmm_outlier_count3$colors[i],
+    Odds_Ratio = f$estimate,
+    P_Value = pvalue(f$p.value),
+    Lower_CI = f$conf.int[1],
+    Upper_CI = f$conf.int[2]
+  )
+})
+
+# Save results to file
+write.table(fisher_results, file = "intersected_module_fisher_test.txt", sep = "\t", row.names = FALSE, quote = FALSE)
+
+# Print results
+print(fisher_results)
+
+fisher <- read.table("intersected_module_fisher_test.txt", header = TRUE) %>%
+  mutate(
+    P_Value = as.numeric(gsub(">", "", P_Value)),  # Remove ">" and convert to numeric
+    n_genes_per_mod = intersected_outlier_count3$n_module_size
+  ) %>%
+  filter(P_Value < 0.05) %>%
+  arrange(desc(Odds_Ratio))
+
+# No WGCNA module was enriched for the genes identified by both PCAdapt and LFMM methods. 
+
+```
+
+```{r get the lsit of genes in the three modules enriched for LFMM genes}
+LFMM_darkgrey_module <- modules %>%
+  filter(colors %in% "darkgrey") %>%
+  select(gene)
+
+write.table(LFMM_darkgrey_module, file = "~/Pleiotropy-and-Local-Adaptation-Silverleaf-Sunflower/LFMM_darkgrey_module.txt", sep = "\t", quote = F, row.names = F)
+
+LFMM_darkturquoise_module <- modules %>%
+  filter(colors %in% "darkturquoise") %>%
+  select(gene)
+
+write.table(LFMM_darkturquoise_module, file = "~/Pleiotropy-and-Local-Adaptation-Silverleaf-Sunflower/LFMM_darkturquoise.txt", sep = "\t", quote = F, row.names = F)
+
+LFMM_green_module <- modules %>%
+  filter(colors %in% "green") %>%
+  select(gene)
+
+write.table(LFMM_green_module, file = "~/Pleiotropy-and-Local-Adaptation-Silverleaf-Sunflower/LFMM_green.txt", sep = "\t", quote = F, row.names = F)
+
+```
+
+
+```{r visualize modules with more than expected selection outliers}
 
 # Select modules with p value < 0.001 and higher odd ratios for visualization on cytoscape
 modules_of_interest <- fisher$Element[1:3]
