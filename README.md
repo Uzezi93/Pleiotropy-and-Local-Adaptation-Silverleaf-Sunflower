@@ -99,7 +99,11 @@ Our analysis revealed that adaptive genes were significantly enriched in pollen 
 </div>
 
 <p style="margin-bottom: 5px;">
-  <strong>Fig 5</strong>. Gene ontology enrichment for biological processes of adaptive genes identified by LFMM (left), PCAdapt (right) and both LFMM and PCAdapt (bottom).
+  <strong>Fig 5</strong>. Gene ontology enrichment for biological processes of adaptive genes identified by LFMM (left), PCAdapt (right), and both LFMM and PCAdapt (bottom).
+</p> 
+
+<p style="margin-bottom: 20px; margin-top: 20px;">
+  <strong>Table 1</strong>. KEGG Module Annotation of the three network modules containing more than expected LFMM adaptive genes. 
 </p> 
 
 <div style="clear: both; margin-top: 20px;"> <!-- Ensures table appears at the correct location -->
