@@ -1,7 +1,8 @@
 # Pleiotropy does not facilitate local adaptation in the Silverleaf sunflower (<i>Helianthus argophyllus</i>)
 
-In this study, we explored connections between pleiotropy and local adaptation in the Texas endemic Silverleaf sunflower or 
-<i>Helianthus argophyllus</i>. Populations of <i>H. argophyllus</i> exhibit a bimodal life history strategy consisting of tall, late-flowering forms and short early-flowering forms occurring in close geographical proximity. We suspect that the differential expression of life history traits within <i>H. argophyllus</i> populations might be linked to local adaptation and controlled by highly pleiotropic genes. We identified spatial selection, selective sweeps, and tested for local adaptation signatures. We assessed pleiotropy by examining if genes bearing adaptive mutations were more likely than expected to occupy central positions on gene coexpression networks. Our results show that candidate locally adapted genes showed significantly lower connectivity than non-adapted genes.
+In this study, we explored connections between pleiotropy and local adaptation in the Texas endemic Silverleaf sunflower, or <i>Helianthus argophyllus</i>. Populations of <i>H. argophyllus</i> exhibit a bimodal life history strategy consisting of tall, late-flowering forms and short, early-flowering forms occurring in close geographical proximity. We hypothesize that the differential expression of life history traits within <i>H. argophyllus</i> populations might be linked to local adaptation and controlled by highly pleiotropic genes. This is related to a study by Hämälä <i>et al</i>, 2020, which observed that adaptive genes in common ragweed (Asteraceae family) that were under selection and highly pleiotropic.
+
+Considering <i>H. argophyllus</i> is also a member of the Asteraceae family, we conducted a similar study to examine the extent of pleiotropy in <i>H. argophyllus</i> adaptive genes. We identified spatial selection, selective sweeps, and tested for local adaptation signatures. We assessed pleiotropy by examining whether genes bearing adaptive mutations were more likely than expected to occur in gene coexpression networks and exhibit higher network connectivity. Our results show that candidate locally adapted genes exhibited significantly lower connectivity than non-adapted genes.
 
 <div style="display: flex; justify-content: center; margin-top: 10px;">
   <img src="Figure_Scripts/PLOS_genetics_figures/Moyers_Reisberg.png" alt="PCAdapt" width="800" />
@@ -103,88 +104,72 @@ Our analysis revealed that adaptive genes were significantly enriched in pollen 
 
 <div style="clear: both; margin-top: 20px;"> <!-- Ensures table appears at the correct location -->
 
-<p style="margin-bottom: 20px;">
-  <strong>Table 1</strong>. KEGG Module Annotation of the three network modules containing more than expected LFMM adaptive genes. 
-</p> 
-
-<style>
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  th {
-    background-color: darkgreen; /* Fills column titles with green */
-    color: white; /* Ensures text is readable */
-    padding: 10px;
-    border: 1px solid black;
-    text-align: left;
-  }
-  td {
-    border: 1px solid black;
-    padding: 10px;
-    text-align: left;
-  }
-</style>
-
-<table>
+<table style="width:100%; border-collapse: collapse;">
   <tr>
-    <th>WGCNA Module</th>
-    <th>KEGG ID</th>
-    <th>Description</th>
-    <th>Adjusted p value</th>
+    <th style="background-color: darkgreen; color: white; padding: 10px; border: 1px solid black; text-align: left;">WGCNA Module</th>
+    <th style="background-color: darkgreen; color: white; padding: 10px; border: 1px solid black; text-align: left;">KEGG ID</th>
+    <th style="background-color: darkgreen; color: white; padding: 10px; border: 1px solid black; text-align: left;">Description</th>
+    <th style="background-color: darkgreen; color: white; padding: 10px; border: 1px solid black; text-align: left;">Adjusted p value</th>
   </tr>
   <tr>
-    <td rowspan="2">Darkgrey</td>
-    <td>M00026</td>
-    <td>Histidine biosynthesis, PRPP => histidine</td>
-    <td>0.00063984</td>
+    <td rowspan="2" style="border: 1px solid black; padding: 10px;">Darkgrey</td>
+    <td style="border: 1px solid black; padding: 10px;">M00026</td>
+    <td style="border: 1px solid black; padding: 10px;">Histidine biosynthesis, PRPP => histidine</td>
+    <td style="border: 1px solid black; padding: 10px;">0.00063984</td>
   </tr>
   <tr>
-    <td>M00129</td>
-    <td>Ascorbate biosynthesis, glucose-1P => ascorbate</td>
-    <td>0.0014631</td>
+    <td style="border: 1px solid black; padding: 10px;">M00129</td>
+    <td style="border: 1px solid black; padding: 10px;">Ascorbate biosynthesis, glucose-1P => ascorbate</td>
+    <td style="border: 1px solid black; padding: 10px;">0.0014631</td>
   </tr>
   <tr>
-    <td rowspan="4">Darkturquoise</td>
-    <td>M00002</td>
-    <td>Glycolysis, core module involving three-carbon compounds</td>
-    <td>0.0006257</td>
+    <td rowspan="4" style="border: 1px solid black; padding: 10px;">Darkturquoise</td>
+    <td style="border: 1px solid black; padding: 10px;">M00002</td>
+    <td style="border: 1px solid black; padding: 10px;">Glycolysis, core module involving three-carbon compounds</td>
+    <td style="border: 1px solid black; padding: 10px;">0.0006257</td>
   </tr>
   <tr>
-    <td>M00048</td>
-    <td>De novo purine biosynthesis, PRPP + glutamine => IMP</td>
-    <td>0.00117279</td>
+    <td style="border: 1px solid black; padding: 10px;">M00048</td>
+    <td style="border: 1px solid black; padding: 10px;">De novo purine biosynthesis, PRPP + glutamine => IMP</td>
+    <td style="border: 1px solid black; padding: 10px;">0.00117279</td>
   </tr>
   <tr>
-    <td>M00001</td>
-    <td>Glycolysis (Embden-Meyerhof pathway), glucose => pyruvate</td>
-    <td>0.00228412</td>
+    <td style="border: 1px solid black; padding: 10px;">M00001</td>
+    <td style="border: 1px solid black; padding: 10px;">Glycolysis (Embden-Meyerhof pathway), glucose => pyruvate</td>
+    <td style="border: 1px solid black; padding: 10px;">0.00228412</td>
   </tr>
   <tr>
-    <td>M00130</td>
-    <td>Inositol phosphate metabolism, PI=> PIP2 => Ins(1,4,5)P3 => Ins(1,3,4,5)P4</td>
-    <td>0.00288918</td>
+    <td style="border: 1px solid black; padding: 10px;">M00130</td>
+    <td style="border: 1px solid black; padding: 10px;">Inositol phosphate metabolism, PI=> PIP2 => Ins(1,4,5)P3 => Ins(1,3,4,5)P4</td>
+    <td style="border: 1px solid black; padding: 10px;">0.00288918</td>
   </tr>
   <tr>
-    <td rowspan="3">Green</td>
-    <td>M00307</td>
-    <td>Pyruvate oxidation, pyruvate => acetyl-CoA</td>
-    <td>0.00107016</td>
+    <td rowspan="3" style="border: 1px solid black; padding: 10px;">Green</td>
+    <td style="border: 1px solid black; padding: 10px;">M00307</td>
+    <td style="border: 1px solid black; padding: 10px;">Pyruvate oxidation, pyruvate => acetyl-CoA</td>
+    <td style="border: 1px solid black; padding: 10px;">0.00107016</td>
   </tr>
   <tr>
-    <td>M00089</td>
-    <td>Triacylglycerol biosynthesis</td>
-    <td>0.00954748</td>
+    <td style="border: 1px solid black; padding: 10px;">M00089</td>
+    <td style="border: 1px solid black; padding: 10px;">Triacylglycerol biosynthesis</td>
+    <td style="border: 1px solid black; padding: 10px;">0.00954748</td>
   </tr>
   <tr>
-    <td>M00432</td>
-    <td>Leucine biosynthesis, 2-oxoisovalerate => 2-oxoisocaproate</td>
-    <td>0.03465363</td>
+    <td style="border: 1px solid black; padding: 10px;">M00432</td>
+    <td style="border: 1px solid black; padding: 10px;">Leucine biosynthesis, 2-oxoisovalerate => 2-oxoisocaproate</td>
+    <td style="border: 1px solid black; padding: 10px;">0.03465363</td>
   </tr>
 </table>
 
 </div> <!-- Ensure this closes properly -->
 
+---------------------------------------------------------------------
+
+### Conclusion
+
+Our results support Fisher's theory, showing that the adaptive genes (LFMM) we found are less likely to affect multiple traits and show signs of positive selection. The reduced connectivity (pleiotropy) in these genes suggests that the two different phenotypes in <i>H. argophyllus</i> have likely reached their best possible adaptation to their environments (optimum). 
+
+---------------------------------------------------------------------
 
 ### Methods
 
