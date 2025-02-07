@@ -3,7 +3,16 @@
 In this study, we explored connections between pleiotropy and local adaptation in the Texas endemic Silverleaf sunflower or 
 <i>Helianthus argophyllus</i>. Populations of <i>H. argophyllus</i> exhibit a bimodal life history strategy consisting of tall, late-flowering forms and short early-flowering forms occurring in close geographical proximity. We suspect that the differential expression of life history traits within <i>H. argophyllus</i> populations might be linked to local adaptation and controlled by highly pleiotropic genes. We identified spatial selection, selective sweeps, and tested for local adaptation signatures. We assessed pleiotropy by examining if genes bearing adaptive mutations were more likely than expected to occupy central positions on gene coexpression networks. Our results show that candidate locally adapted genes showed significantly lower connectivity than non-adapted genes.
 
-----------------------------------------------------------------------
+<div style="display: flex; justify-content: center; margin-top: 10px;">
+  <img src="Figure_Scripts/PLOS_genetics_figures/Moyers_Reisberg.png" alt="PCAdapt" width="800" />
+</div>
+
+<p style="margin-bottom: 5px;">
+  <strong>A</strong>. South Texas <em>Helianthus argophyllus</em> populations and  
+  <strong>B</strong>: Bimodal distribution of life history traits (from Moyers and Rieseberg, 2016).  
+</p>
+
+---------------------------------------------------------------------
 
 ### Genetic diversity and population structure
 
@@ -32,7 +41,7 @@ Two methods, LFMM 2 and PCAdapt, were used to identify genetic regions driving l
 
 To assess if selection outlier loci were more pleiotropic than control genes, associations between SNPs and gene expression were tested for trans-regulatory variants. A total of 42,638 genes were used in the eQTL analysis, controlling for population structure with admixture proportions (K = 4). The analysis identified 1,824 eQTL genes (4.3%) associated with the expression of 3,129 eGenes (7.3%) at an FDR < 0.01. Of the 560 LFMM outlier genes, 114 (20.4%) were eQTLs, and 208 (18.5%) of PCAdapt outliers were eQTLs. Only 11 (2%) LFMM outliers and 24 (2.1%) PCAdapt outliers were eGenes. Both outlier gene sets had significantly more eQTLs and fewer eGenes compared to the rest of the transcriptome (p < 2.2e-16, Fisher’s exact test).
 
-<div style="display: flex; align-items: center; justify-content: space-between;">
+<div style="display: flex; justify-content: center; margin-top: 10px;">
   <img src="Figure_Scripts/PLOS_genetics_figures/eQTL_eGene.tiff" alt="K 2" width="600" />
 </div>
 
@@ -66,7 +75,10 @@ Genetic differentiation, measured by FST, was significantly higher for LFMM outl
 
 Gene co-expression analysis identified 44 modules, with a median of 41 genes per module. Three modules were significantly enriched for LFMM genes, while no modules were enriched for PCAdapt genes or genes identified by both methods. Connectivity analysis revealed that PCAdapt outlier genes and eQTLs had higher connectivity than control genes (p < 2.2e-16), whereas LFMM outlier genes and eGenes were less connected than control genes (p < 2.2e-16).
 
+<div style="display: flex; justify-content: center; margin-top: 10px;">
 <img src="Figure_Scripts/PLOS_genetics_figures/connectivity_plot.tiff" alt="connectivity" width="400" height="400" />
+</div>
+
 <p style="margin-bottom: 5px;">
   <strong>Fig 4</strong>. Gene network connectivity at candidate adaptive genes.  Estimated connectivity of candidate adaptive genes, eGenes, and eQTLs compared to the transcriptome-wide control.  
   
