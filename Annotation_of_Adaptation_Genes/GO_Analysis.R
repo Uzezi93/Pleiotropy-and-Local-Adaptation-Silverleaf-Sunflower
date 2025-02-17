@@ -72,7 +72,15 @@ green_gff  <- readGFF(green_gff)
 
 # Extract gene IDs
 green_genes <- green_gff$gene 
+#------------------------------------------------------------
+# Get ncbi gene IDs for genes in the eGenes
+eGene_gff <- "eGenes_exons.gff"
 
+# Read the GFF file
+eGene_gff  <- readGFF(eGene_gff)
+
+# Extract gene IDs
+eGene_genes <- eGene_gff$gene 
 #------------------------------------------------------------
 
 all_genes <- read.delim("~/Downloads/GCF_002127325.2_HanXRQr2.0-SUNRISE_gene_ontology.gaf", skip = 8, header = TRUE)
@@ -197,6 +205,26 @@ ggsave("LFMM_Green_gene_over_representation_barplot.tiff", plot = p11, device = 
 p12 <- dotplot(c) +
   ggtitle("Gene Over Representation Analysis for LFMM Green Module")
 ggsave("LFMM_Green_gene_over_representation_dotplot.tiff", plot = p12, device = "tiff", width = 7, height = 4)
+
+
+#------------------------------------------------------------
+# Enrichment analysis for eGenes
+d = enricher(eGene_genes, TERM2GENE=term2gene)
+head(summary(d))
+
+# Save gene over representation analysis table
+write.table(d, file = "eGene_over-representation.txt", sep = "\t", quote = F)
+
+p13 <- barplot(d, main="Over Representation Analysis for eGenes") +
+  ggtitle("Gene Over Representation Analysis for eGenes")
+
+# Save the ggplot as a .tiff file
+ggsave("eGene_over_representation_barplot.tiff", plot = p13, device = "tiff", width = 7, height = 4)
+
+p14 <- dotplot(d) +
+  ggtitle("Gene Over Representation Analysis for eGenes")
+
+ggsave("eGene_over_representation_dotplot.tiff", plot = p14, device = "tiff", width = 7, height = 4)
 
 
 #------------------------------------------------------------
