@@ -1,0 +1,9 @@
+Input: lname=genolike.beagle.gz nPop=1, fname=(null) qname=(null) outfiles=str_k_1
+Setup: seed=1697440308 nThreads=10 method=1
+Convergence: maxIter=2000 tol=0.000010 tolLike50=0.100000 dymBound=0
+Filters: misTol=0.050000 minMaf=0.050000 minLrt=0.000000 minInd=0
+Input file has dim: nsites=106133 nind=27
+Input file has dim (AFTER filtering): nsites=100284 nind=27
+	[ALL done] cpu-time used =  2.93 sec
+	[ALL done] walltime used =  3.00 sec
+best like=-1610191.059897 after 5 iterations

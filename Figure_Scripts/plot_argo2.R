@@ -4,6 +4,7 @@ setwd("/project/pi_brook_moyers_umb_edu/Uzezi_argo/Helianthus_argophyllus_projec
 library(stringr)
 library(tidyverse)
 library(tidyr)
+library(dplyr)
 library(data.table)
 library(tibble)
 library(formattable)
@@ -854,7 +855,6 @@ North_Coast_theta_pie_plot <- plot_grid(p7, p8)
 ggsave("PLOS_genetics_figures/North_Coast_theta_pie_plot.tiff", plot = North_Coast_theta_pie_plot, device = "tiff", width = 10, height = 5)
 
 #------------------------------------------------------------------------------
-
 # Plot FSTs for LFMM, PCAdapt, and Control
 LFMM <- LFMM_FST$weighted_FST
 PCAdapt <- PCAdapt_FST$weighted_FST
@@ -1045,10 +1045,12 @@ my_colors2 <- c("All" = "darkgrey", "LFMM" = "brown", "PCAdapt" = "aquamarine4")
 # Get eQTL proportions
 percent_eQTL2 <- percent_eQTL %>%
   group_by(eQTL) %>%
-  summarise(total = n(),
-            successes = sum(count == 1)) %>%
-  mutate(proportion = successes / total)
-
+  summarise(
+    total = n(),
+    successes = sum(count == 1),
+    proportion = sum(count == 1) / n(),
+    .groups = "drop"
+  )
 
 # Get eGene proportions
 percent_eGene2 <- percent_eGene %>%
@@ -1104,8 +1106,15 @@ p11 <- data.frame(boot = 1:1000) %>%
   scale_fill_manual(values = my_colors2) +  # Adjust to your color preferences
   guides(fill = "none") +
   theme_bw() +
+  theme(
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_text(size = 20),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18)
+  ) +
   annotate("text", x = 1.5, y = max(percent_eQTL2$proportion) + 0.02, 
-           label = paste("Fisher's p-value:", format("< 2.2e-16", digits = 3)), size = 4, hjust = 0.5)
+           label = paste("Fisher's p-value:", format("< 2.2e-16", digits = 3)), size = 8, hjust = 0.5)
+
 
 
 # Save the ggplot as a .tiff file
@@ -1168,8 +1177,14 @@ p12 <- data.frame(boot = 1:1000) %>%
   scale_fill_manual(values = my_colors2) +  # Adjust to your color preferences
   guides(fill = "none") +
   theme_bw() +
+  theme(
+    axis.title.x = element_text(size = 20),
+    axis.title.y = element_text(size = 20),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18)
+  ) +
   annotate("text", x = 1.5, y = max(percent_eGene2$proportion) + 0.09, 
-           label = paste("Fisher's p-value:", format("< 2.2e-16", digits = 3)), size = 4, hjust = 0.5)
+           label = paste("Fisher's p-value:", format("< 2.2e-16", digits = 3)), size = 8, hjust = 0.5)
 
 # Save the ggplot as a .tiff file
 ggsave("PLOS_genetics_figures/eGene_proportions.tiff", plot = p12, device = "tiff")
@@ -1177,16 +1192,12 @@ ggsave("PLOS_genetics_figures/eGene_proportions.tiff", plot = p12, device = "tif
 eQTL_eGene <- plot_grid(p11, p12, label_size = 1)
 
 eQTL_eGene2 <- plot_grid(
-  ggdraw() + draw_label("Proportion of eQTLs and eGenes in selection outliers", fontface = 'bold', size = 14, hjust = 0.5),
   eQTL_eGene,
-  ncol = 1,
-  rel_heights = c(0.1, 1)  # Adjust the height ratio as needed
+  ncol = 1
 )
 
-ggsave("PLOS_genetics_figures/eQTL_and_eGenes_proportions.tiff", plot = eQTL_eGene2, device = "tiff", width = 10, height = 10)
 
-
-
+ggsave("PLOS_genetics_figures/eQTL_and_eGenes_proportions.tiff", plot = eQTL_eGene2, device = "tiff", width = 14, height = 6, dpi = 200)
 
 
 # Change directory

@@ -71,16 +71,27 @@ b <- ggplot(pca, aes(PC1, PC2, col = population)) + geom_point(size = 6)
 b <- b + scale_colour_manual(values = c("brown", "aquamarine4", "darkgrey"))
 b <- b + coord_equal() + theme_light()
 # c <- b + xlab(paste0("PC1 (", signif(pve$pve[1], 3), "%)")) + ylab(paste0("PC2 (", signif(pve$pve[2], 3), "%)"))
-c <- b + 
-  xlab(paste0("PC1 (", signif(pve$pve[1], 3), "%)")) + 
+c <- b +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 3), "%)")) +
   ylab(paste0("PC2 (", signif(pve$pve[2], 3), "%)")) +
   theme(
-    axis.title.x = element_text(size = 14),   # Increase x-axis label size
-    axis.title.y = element_text(size = 14),   # Increase y-axis label size
-    axis.text.x = element_text(size = 12),    # Increase x-axis tick number size
-    axis.text.y = element_text(size = 12)     # Increase y-axis tick number size
+    axis.title.x = element_text(size = 50),   # X-axis label
+    axis.title.y = element_text(size = 50),   # Y-axis label
+    axis.text.x  = element_text(size = 50),   # X-axis ticks
+    axis.text.y  = element_text(size = 50),   # Y-axis ticks
+    legend.title = element_text(size = 50),   # Legend title
+    legend.text  = element_text(size = 50),   # Legend labels
+    plot.title   = element_text(size = 22, face = "bold", hjust = 0.5)  # Optional plot title
   )
 
 
+ggsave(
+  plot = c,
+  filename = "../argo_plots/PLOS_genetics_figures/pca.tiff",
+  width = 7,
+  height = 5,
+  units = "in",
+  dpi = 300,
+  compression = "lzw"  # lossless compression required by many journals
+)
 
-ggsave(plot=c, filename="../argo_plots/PLOS_genetics_figures/pca.tiff", width=7, height=5, device = "tiff", unit = "in")
