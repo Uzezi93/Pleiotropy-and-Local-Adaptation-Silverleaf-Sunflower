@@ -137,7 +137,7 @@ wilcox_against_control <- function(df, value_col, control_name="control", reps=1
   })
 }
 
-# ===================== π / θW (your existing style) =====================
+# ===================== π / θW  =====================
 coast <- read_tsv("coast_pi_watterson_by_module.tsv", show_col_types = FALSE)
 north <- read_tsv("north_pi_watterson_by_module.tsv", show_col_types = FALSE)
 
@@ -214,7 +214,7 @@ cat("\n[Wilcoxon vs Control — NORTH π]\n");  print(wilcox_against_control(nor
 cat("\n[Wilcoxon vs Control — NORTH θw]\n"); print(wilcox_against_control(north_pi,  watterson_theta, reps = 1000))
 
 #-----------------------------------------------------------------------------------------
-# ====================== FST / dXY with separate plotters ======================
+# ====================== FST / dXY  ======================
 fst <- read_tsv("fst_by_module_from_bed.tsv", show_col_types = FALSE)
 dxy <- read_tsv("dxy_by_module_from_bed.tsv", show_col_types = FALSE)
 
@@ -228,7 +228,7 @@ dxy_df <- dxy %>%
 fst_boot <- fst_df %>% bootstrap_control_match(fst)
 dxy_boot <- dxy_df %>% bootstrap_control_match(dxy)
 
-# ---- new tiny core used by the wrappers below ----
+# ---- adjustable violin plot wrappers ----
 if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
 
 .mk_violin <- function(dfp, y, ylab, title, file = NULL,
@@ -262,7 +262,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
     ) %>%
     dplyr::filter(star != "")
   
-  # Fixed global y for star placement (if not provided, compute a safe one)
+  # Fixed global y for star placement 
   if (is.null(star_y)) {
     star_y <- stats::quantile(dfp |> dplyr::pull({{ y }}), star_q, na.rm = TRUE) * star_pad
   }
@@ -303,7 +303,7 @@ if (!exists("%||%")) `%||%` <- function(a, b) if (!is.null(a)) a else b
   invisible(list(plot = p, pvals = ptab))
 }
 
-# pick a fixed y for stars that’s above the highest box (adjust as needed)
+# fixed y for stars that’s above the highest box
 fixed_star_y <- 0.23
 plot_fst <- function(df, title = " ", ylab = expression(F[ST]),
                      file = NULL, y_range = NULL, star_q = 0.98, star_pad = 2) {
@@ -432,13 +432,13 @@ plot_lr_by_module <- function(df, title, outfile = NULL,
   mods_present <- intersect(mod_order_disp, unique(dfp$module_disp))
   dfp <- dfp %>% dplyr::mutate(module_disp = factor(module_disp, levels = mods_present))
   
-  # control median (dashed reference)
+  # control median (reference)
   ctl_med <- dfp %>%
     dplyr::filter(module_disp == "Control") %>%
     dplyr::summarise(med = median(LR, na.rm = TRUE)) %>%
     dplyr::pull(med)
   
-  # Wilcoxon vs Control -> stars (use df *after* cleaning)
+  # Wilcoxon vs Control : stars
   df_for_test <- dfp %>% dplyr::transmute(module = module_disp, LR = LR)
   ptab <- wilcox_against_control(df_for_test, LR) %>%
     dplyr::mutate(
@@ -524,9 +524,8 @@ suppressPackageStartupMessages({
   library(dplyr); library(readr); library(stringr)
 })
 
-# Safe loader that guarantees numeric 'connectivity'
+# load connectivity in numeric format
 read_connect <- function(path) {
-  # readr is stricter & faster; parse_number strips commas/units if any
   readr::read_table2(
     file = path,
     col_names = c("gene","connectivity"),
@@ -541,7 +540,7 @@ read_connect <- function(path) {
     )
 }
 
-# Wrapper around your shared .mk_violin core
+# Wrapper for shared .mk_violin function
 plot_connectivity <- function(df,
                               title   = " ",
                               file    = NULL,
@@ -568,9 +567,6 @@ eGene_connectivity   <- read_connect("/project/pi_brook_moyers_umb_edu/Uzezi_arg
 control_connectivity <- read_connect("/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/control_connectivity.txt")
 shared_connectivity  <- read_connect("/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/shared_connectivity.txt")
 
-# If your files are clean numeric already, the simpler base read.table also works:
-# read.table(..., col.names = c("gene","connectivity"), colClasses = c("character","numeric"))
-
 # Build combined table
 connect_df <- list(
   control = control_connectivity,
@@ -588,19 +584,15 @@ connect_df <- list(
     log_connectivity = log10(connectivity + 1e-8) # add log-transformed column
   )
 
-# Sanity checks (helpful if it fails again)
+# Sanity checks
 stopifnot(is.numeric(connect_df$log_connectivity))
 # drop NA rows (wilcox.test can't handle NA)
 connect_df <- dplyr::filter(connect_df, !is.na(log_connectivity))
 
-# Optional: show any non-numeric leftovers before coercion (debug helper)
-# bad <- readr::read_lines("/project/.../lfmm_connectivity.txt")
-# dplyr::tibble(line = bad) %>% dplyr::filter(!str_detect(line, "^[^\\t]+\\t[-+]?[0-9]*\\.?[0-9]+([eE][-+]?\\d+)?$")) %>% print(n=50)
-
 # Bootstrap Control to each module’s N
 connect_boot <- connect_df %>% bootstrap_control_match(log_connectivity)
 
-# Your wrapper should now work
+# Plot connectivity
 p_connect <- plot_connectivity(
   connect_boot,
   title = " ",
@@ -629,7 +621,7 @@ roi_gene_ids <- unique(roi_genes$gene)
 roi_gene_pos <- roi_genes %>%
   dplyr::transmute(gene, chromosome, mid = 0.5 * (start + end))
 
-# ---------------- helper: generic window-overlap via foverlaps ----------------
+# ---------------- function: generic window-overlap via foverlaps ----------------
 get_roi_windows_any <- function(df_windows, roi_tbl, value_col) {
   # df_windows must have: chromosome, window_pos_1, window_pos_2, gene, and `value_col`
   stopifnot(all(c("chromosome","window_pos_1","window_pos_2") %in% names(df_windows)))
@@ -774,10 +766,10 @@ p_fay_clr <- scan_long %>%
     legend.position    = "right"
   )
 
-# optional: save
+# save
 # ggsave("HaFT1_REGION_FayH_CLR_oneplot.png", p_fay_clr, width = 10, height = 4.8, dpi = 300)
 
-# ---------------- Save individual panels (optional) ----------------
+# ---------------- Save individual panels  ----------------
 # ggsave("HaFT1_region_diversity_line.png", p_div_line, width=10, height=4.5, dpi=300)
 # ggsave("HaFT1_region_FST_DXY_line.png", p_fstdxy_line, width=10, height=4.5, dpi=300)
 # ggsave("HaFT1_region_FayH_line.png", p_fay_line, width=10, height=3.6, dpi=300)
