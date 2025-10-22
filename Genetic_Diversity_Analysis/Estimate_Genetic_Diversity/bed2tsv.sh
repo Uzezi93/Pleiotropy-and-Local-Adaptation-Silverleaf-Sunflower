@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Convert bed files to tsv before running angsd
-# List your module BEDs here
+# List of BED files
 beds=(
   control_genes.coords.bed
   eGene_genes.coords.bed
