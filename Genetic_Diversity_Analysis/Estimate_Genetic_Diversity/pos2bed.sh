@@ -7,7 +7,7 @@ POS="eGenes_pos.txt"
 GENE_BED="/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/vcf_by_gene_sets/gene_coord.bed.gz"
 OUT="egenes_coords.bed"
 
-# (optional) load bedtools if needed
+# load bedtools
 module load bedtools2/2.31.1 || true
 
 # Make a 0-based, half-open BED from 1-based single positions:
