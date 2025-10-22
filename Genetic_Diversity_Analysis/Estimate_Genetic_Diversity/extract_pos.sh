@@ -13,7 +13,7 @@ set -euo pipefail
 
 shopt -s nullglob
 
-# List your VCFs here (bgzipped + indexed)
+# List of VCFs (bgzipped + indexed)
 vcfs=(
   eGenes.vcf.gz
   eQTL_genes.vcf.gz
