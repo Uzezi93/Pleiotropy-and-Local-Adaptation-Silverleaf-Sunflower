@@ -3,9 +3,9 @@
 #SBATCH -c 8
 #SBATCH --mem=40G
 #SBATCH -t 12:00:00
-#SBATCH -p gpu                   # if you have a CPU partition, prefer that
+#SBATCH -p gpu
 #SBATCH -o slurm-%j.out
-#SBATCH -G 4                   # GPUs not needed
+#SBATCH -G 4
 
 # Script to filter vcf file with monomorphic sites to contain my specific samples
 
