@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -J pixy_vcf_filter
-#SBATCH -c 2                   # fewer threads to reduce memory overhead
-#SBATCH --mem=80G              # increase memory allocation
+#SBATCH -c 2
+#SBATCH --mem=80G
 #SBATCH -t 24:00:00
-#SBATCH -p cpu                 # request CPU partition, not GPU
+#SBATCH -p cpu
 #SBATCH -o slurm-%j.out
 
 module load bcftools/1.19
@@ -26,6 +26,6 @@ module load bcftools/1.19
 ) | bgzip > pixy_diploidized.vcf.gz
 bcftools index -t -f  pixy_diploidized.vcf.gz
 
-# 2) (Recommended) keep sites with >=2 called genotypes
+# 2) keep sites with >=2 called genotypes
 bcftools view -i 'N_MISSING<=NSAMPLES-2' -Oz -o pixy_diploidized.min2.vcf.gz pixy_diploidized.vcf.gz
 bcftools index -t -f pixy_diploidized.min2.vcf.gz
