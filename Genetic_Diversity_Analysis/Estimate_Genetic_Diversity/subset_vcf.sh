@@ -3,7 +3,7 @@
 #SBATCH -c 8
 #SBATCH --mem=80G
 #SBATCH -t 48:00:00
-#SBATCH -p cpu                 # gpu not needed
+#SBATCH -p cpu
 #SBATCH -o slurm-%A_%a.out
 #SBATCH --array=1-6            # <-- one task per BED below
 
@@ -11,8 +11,8 @@
 
 set -euo pipefail
 
-module load bcftools/1.19     # provides bgzip/tabix too
-module load vcftools/0.1.16   # or whatever version you use
+module load bcftools/1.19
+module load vcftools/0.1.16
 
 # -------- inputs --------
 VCF="../../../pixy_diploidized.vcf.gz"
@@ -29,7 +29,7 @@ BEDS=(
   "shared_genes.coords.bed"
 )
 
-# -------- pick this task's BED --------
+# -------- pick task's BED --------
 i=${SLURM_ARRAY_TASK_ID}
 BED=${BEDS[$((i-1))]}
 
@@ -42,7 +42,7 @@ if [[ ! -s "$VCF" ]]; then
   exit 3
 fi
 
-# derive a nice output stem from the BED name
+# derive an output stem from the BED name
 stem=$(basename "$BED")
 stem=${stem%.bed}
 stem=${stem%.bed.gz}
