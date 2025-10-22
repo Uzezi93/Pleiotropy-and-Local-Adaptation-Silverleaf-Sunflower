@@ -1,63 +1,49 @@
 #!/bin/bash
-
-module load vcftools/svn.code.sf.net_r1005
-
-# Get raw snp files
-
-# vcftools --gzvcf output.vcf.gz --remove-indels --recode --recode-INFO-all --out raw_snps.vcf.gz
-
-# Add vcf filters
-
-# vcftools --gzvcf raw_snps.vcf.gz.recode.vcf.gz --minQ 30 --minGQ 20 --maf 0.05 --max-non-ref-af 0.999 --hwe 0.8 --max-missing 0.9 --min-meanDP 5 --max-meanDP 40 --recode --recode-INFO-all --out filtered_snp
+#SBATCH -J vcf_merge
+#SBATCH -c 8
+#SBATCH --mem=40G
+#SBATCH -t 12:00:00
+#SBATCH -p gpu
+#SBATCH -o slurm-%j.out
+#SBATCH -G 4
 
 
-# Filter north and coast vcf based on positions from LFMM, PCAdapt, eQTL, and eGenes analysis
+set -euo pipefail
 
-# vcftools --gzvcf annoted_snps.vcf.gz --positions lfmm_pos.txt --recode --out lfmm
+# Modules
+module load bcftools/1.19 || true
 
-# vcftools --vcf coast_pop.vcf --positions lfmm_pos.txt --recode --out coast_lfmm
+# I also used this script for generating and filtering biallelic variants
+# INPUT
+# IN_VCF="freebayes.merged.norm.vcf.gz"
+IN_VCF="../../invariant_refonly.vcf.gz"
 
-# vcftools --gzvcf annoted_snps.vcf.gz --positions pcadapt_pos.txt --recode --out pcadapt
+# Outputs
+# RAW_SNPS="invariant_snp.vcf.gz"
+FILT_SNPS="invariant_filtered_snps.vcf.gz"
 
-# vcftools --vcf coast_pop.vcf --positions pcadapt_pos.txt --recode --out coast_pcadapt
+# 1) Keep **biallelic SNPs only** (strict SNP selection)
+#    -m2 -M2 : only biallelic
+#    -v snps : only SNPs (excludes MNPs/complex)
+# bcftools view -m2 -M2 -v snps -Oz -o "$RAW_SNPS" "$IN_VCF"
+# bcftools index -t "$RAW_SNPS"
 
-# vcftools --vcf annoted_snps.vcf --positions eQTL_position.txt --recode --out eQTL
+# 2) Apply site/genotype filters with vcftools
+# NOTE: --hwe 0.8 is extremely stringent; most workflows use something like 1e-6.
+# Adjust to your study design. Here we set 1e-6 (change if you intend a different threshold).
+vcftools \
+  --gzvcf "$IN_VCF" \
+  --minQ 30 \
+  --minGQ 20 \
+  --max-missing 0.8 \
+  --min-meanDP 5 \
+  --max-meanDP 40 \
+  --recode --recode-INFO-all --stdout \
+  | bgzip -c > "$FILT_SNPS"
 
-# vcftools --vcf coast_pop.vcf --positions eQTL_position.txt --recode --out coast_eQTL
+# Index final
+bcftools index -t "$FILT_SNPS"
 
-# vcftools --vcf north_pop.vcf --positions eQTL_position.txt --recode --out north_eQTL
-
-# vcftools --gzvcf annoted_snps.vcf.gz --bed eGenes.bed --out eGenes --recode --keep-INFO-all
-
-# bcftools view -S coast_pop.txt eGenes.recode.vcf > coast_eGenes.vcf
-
-# bcftools view -S north_pop.txt eGenes.recode.vcf > north_eGenes.vcf
-
-
-
-# Create control vcf set to confirm outlier test
-# vcftools --vcf annoted_snps.vcf --exclude-positions combined_positions.txt --recode --recode-INFO-all --out control
-
-# Create 012 coded vcf file for eQTL analysis
-# vcftools --vcf filtered_snp.recode.vcf --012 --recode-INFO-all --out filtered_vcf
-
-
-# Make CLR input files from LFMM, PCAdapt, eQTL, and eGenes loci from north and coastal populations
-
-cd ./outputs/
-
- for i in *.vcf
-
- do
-
- vcftools --vcf $i --counts2 --out ${i}_SF_tmp
-
- tail -n+2 ${i}_SF_tmp.frq.count | awk -v OFS="\t" '{print $2,$6,$4,"1"}'> ${i}_SF.in
-
- echo -e 'position\tx\tn\tfolded' | cat - ${i}_SF.in > temp && mv temp ${i}_SF.in
-
- done
-
-
-
-
+echo "Done:"
+# echo "  Biallelic SNPs : $RAW_SNPS (+ .tbi)"
+echo "  Filtered SNPs  : $FILT_SNPS (+ .tbi)"
