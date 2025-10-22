@@ -37,15 +37,13 @@ for d in "${ROOT}"/*.*; do
   for f in "$d"/*.theta.thetas.idx.pestPG; do
     [[ -s "$f" ]] || continue
 
-    # Gene tag: strip directory & suffix. Your filenames look like "gene.<ID>.theta.thetas.idx.pestPG"
+    # Gene tag: strip directory & suffix. My filenames look like "gene.<ID>.theta.thetas.idx.pestPG"
     fname="$(basename "$f")"
     gene="${fname%.theta.thetas.idx.pestPG}"
-    # remove common "gene." prefix if present
+    # remove common "gene." prefix 
     gene="${gene#gene.}"
 
     # Parse pestPG: skip header lines starting with "#" and keep the lines starting with "("
-    # Columns are tab-separated; layout (example):
-    # (0,4135)(205...)(0,...) \t Chr \t WinCenter \t tW \t tP \t tF \t tH \t tL \t Tajima \t fuf \t fud \t fayh \t zeng \t nSites
     awk -v MOD="$module" -v POP="$pop" -v GENE="$gene" -v FILE="$f" -v OFS="\t" '
       BEGIN{ n=0 }
       $0 ~ /^#/ { next }                                # skip header comment line
@@ -58,7 +56,7 @@ for d in "${ROOT}"/*.*; do
       }
       END{
         if(n==0){
-          # No data rows; print an NA row to keep track (optional — comment this block to skip empties)
+          # No data rows; print an NA row to keep track
           # print MOD, POP, GENE, "NA", "NA", "NA", "NA", "NA", "0", FILE > "/dev/stderr"
         }
       }
