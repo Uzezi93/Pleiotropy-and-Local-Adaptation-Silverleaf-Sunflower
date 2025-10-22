@@ -17,7 +17,7 @@ OUTDIR="ADMIXTURE_REAL"
 LOGDIR="${OUTDIR}/logs"
 mkdir -p "$OUTDIR" "$LOGDIR"
 
-# ---- modules (if needed) ----
+# ---- required modules ----
 module load admixture/1.3.0 2>/dev/null || module load admixture 2>/dev/null || true
 
 # ---- sanity checks ----
