@@ -88,6 +88,14 @@ ggsave(
   compression = "lzw"  # lossless compression required by many journals
 )
 
+# Top two samples from PC2
+pca2 <- pca %>% 
+  rownames_to_column(var = "ind")   # turn rownames into a real column
+
+pca2 %>%
+  dplyr::select(ind, PC1, PC2, population, base_id) %>%
+  arrange(desc(PC2)) %>%
+  slice(1:2)
 
 library(tidyverse)
 library(stringr)

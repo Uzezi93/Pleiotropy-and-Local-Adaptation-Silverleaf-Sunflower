@@ -279,9 +279,26 @@ imp <- cbind.data.frame(res.comp$completeObs)
 
 write.env(imp, "gradients.env")
 
+# Plot PCA of BIOCLIM variables 
+res.pca <- PCA(imp, scale.unit = TRUE, ncp = nb$ncp, graph = FALSE)
+loadings <- res.pca$var$coord
+head(loadings)
+
+# PCA for dimensions 1 & 2
+fviz_pca_var(res.pca, 
+             col.var = "contrib",       
+             repel = TRUE,              
+             title = "Bioclim Variable Loadings (PCA)")
+
+# PCA for dimensions 3 & 4
+fviz_pca_var(res.pca, 
+             axes = c(3,4),
+             col.var = "contrib",       
+             repel = TRUE,              
+             title = "Bioclim Variable Loadings (PCA)")
+
 
 #----------------------------------------------------------------------------------
-
 pred.pca <- rda(imp, scale=T)
 plot(pred.pca)
 summary(pred.pca)$cont
@@ -455,7 +472,7 @@ pred.PC4 <- vegan::scores(pred.pca, display = "sites", choices = 4, scaling = 0)
 
 
 # Running LFMM (Univariate GEA)
-# Run lfmm at K=1
+# Run lfmm at K=2
 K <- 2
 
 argo.lfmm4 <- lfmm_ridge(Y=dat.imp, X=pred.PC4, K=K) ## change K as you see fit
@@ -558,41 +575,40 @@ write.table(lfmm_region_fin,
 
 
 # Get LFMM p values
-pval1 <- argo.pv1$PC1
-pval2 <- argo.pv2$PC2
-pval3 <- argo.pv3$PC3
-pval4 <- argo.pv4$PC4
+qval1 <- argo.qv
+qval2 <- argo.qv2
+qval3 <- argo.qv3
+qval4 <- argo.qv4
 
 
 # Add p-values to your bim table
 # Combine all p-values into one data frame with SNP info
-bim_pval_all <- bim %>%
+bim_qval_all <- bim %>%
   dplyr::select(CHR, POS, SNP, REF, ALT) %>%
   dplyr::mutate(
-    PVAL_PC1 = pval1,
-    PVAL_PC2 = pval2,
-    PVAL_PC3 = pval3,
-    PVAL_PC4 = pval4
+    QVAL_PC1 = qval1,
+    QVAL_PC2 = qval2,
+    QVAL_PC3 = qval3,
+    QVAL_PC4 = qval4
   )
 
 # check structure
-str(bim_pval_all)
-head(bim_pval_all)
+str(bim_qval_all)
+head(bim_qval_all)
 
 
-bim_pval_all <- bim_pval_all %>%
-  mutate(across(starts_with("PVAL_PC"), ~ as.vector(.x)))
-
+bim_qval_all <- bim_qval_all %>%
+  mutate(across(starts_with("QVAL_PC"), ~ as.vector(.x)))
 
 lfmm_gene_coord <- read.table("/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/lfmm_chrom_pos_gene.txt", sep = "\t")
 names(lfmm_gene_coord) <-  c("CHR", "POS", "gene")
 
 # ensure POS types match (both numeric or integer)
-bim_pval_lfmm <- bim_pval_all %>%
+bim_qval_lfmm <- bim_qval_all %>%
   mutate(POS = as.integer(POS))   # make sure same type as pcadapt_gene_coord
 
 # join by CHR and POS
-merged_df <- bim_pval_all %>%
+merged_df <- bim_qval_all %>%
   left_join(lfmm_gene_coord, by = c("CHR", "POS"))
 
 merged_df <- merged_df %>%
@@ -603,8 +619,9 @@ head(merged_df, 10)
 
 # Save positions rowise. 
 write.table(merged_df, 
-            file = "/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/lfmm_pval.txt", 
+            file = "/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/lfmm_qval.txt", 
             col.names = FALSE, 
             row.names = FALSE, 
             quote = FALSE,
             sep = "\t")
+
