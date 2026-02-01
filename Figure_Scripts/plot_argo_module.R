@@ -480,4 +480,424 @@ clr_fay_grid <- cowplot::plot_grid(
 )
 ggsave("fst_dxy_fayh_clr_violin_box_coast_north.png", clr_fay_grid, width = 12, height = 10, dpi = 300)
 
+#--------------------------------------------------------------------------------------------------
+# Plot co-expression modules without selection outliers
+lfmm_ids    <- read_gene_ids("/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/vcf_by_gene_sets/lfmm_genes.coords.bed")
+pcadapt_ids <- read_gene_ids("/project/pi_brook_moyers_umb_edu/Uzezi_argo/raw_fastq/variants/chunks/analysis_vcf_files/vcf_by_gene_sets/pcadapt_genes.coords.bed")
+
+# ==============================================================================
+# ADD-ON: Re-run the same module plots AFTER EXCLUDING LFMM + PCAdapt outliers
+# Paste this chunk below your existing code (no changes to original code needed)
+# ==============================================================================
+
+# --- Safety checks -------------------------------------------------------------
+if (!exists("lfmm_ids") || !exists("pcadapt_ids")) {
+  stop("lfmm_ids and/or pcadapt_ids not found. Make sure my read_gene_ids() calls ran successfully.")
+}
+
+# --- Helpers ------------------------------------------------------------------
+strip_gene_prefix <- function(x) sub("^gene:", "", as.character(x))
+
+exclude_outliers <- function(df, gene_col = gene, excl) {
+  df %>%
+    mutate(.gene_key = strip_gene_prefix({{ gene_col }})) %>%
+    filter(!.gene_key %in% excl) %>%
+    dplyr::select(-.gene_key)
+}
+
+# --- Build union exclusion set ------------------------------------------------
+lfmm_excl    <- unique(strip_gene_prefix(lfmm_ids))
+pcadapt_excl <- unique(strip_gene_prefix(pcadapt_ids))
+outlier_excl <- unique(c(lfmm_excl, pcadapt_excl))
+message("[NO_OUTLIERS] Excluding union(LFMM, PCAdapt) genes: ", length(outlier_excl))
+
+# ==============================================================================
+# Re-run: π & Watterson θ (Coast / North)
+# ==============================================================================
+
+coast2 <- read_tsv("coast_pi_watterson_by_color.tsv", show_col_types = FALSE)
+north2 <- read_tsv("north_pi_watterson_by_color.tsv", show_col_types = FALSE)
+
+coast_pi2 <- coast2 %>%
+  mutate(module = factor(module_to_disp(module), levels = mod_order_disp)) %>%
+  dplyr::select(module, gene, chromosome, window_pos_1, window_pos_2, pi, watterson_theta)
+
+north_pi2 <- north2 %>%
+  mutate(module = factor(module_to_disp(module), levels = mod_order_disp)) %>%
+  dplyr::select(module, gene, chromosome, window_pos_1, window_pos_2, pi, watterson_theta)
+
+coast_pi2_no  <- exclude_outliers(coast_pi2, gene, outlier_excl)
+north_pi2_no  <- exclude_outliers(north_pi2, gene, outlier_excl)
+
+# Bootstrap control sizes
+coast_pi2_boot_no  <- bootstrap_control_match(coast_pi2_no,  pi) %>%
+  mutate(module = factor(module, levels = mod_order_disp))
+coast_wat2_boot_no <- bootstrap_control_match(coast_pi2_no,  watterson_theta) %>%
+  mutate(module = factor(module, levels = mod_order_disp))
+north_pi2_boot_no  <- bootstrap_control_match(north_pi2_no,  pi) %>%
+  mutate(module = factor(module, levels = mod_order_disp))
+north_wat2_boot_no <- bootstrap_control_match(north_pi2_no,  watterson_theta) %>%
+  mutate(module = factor(module, levels = mod_order_disp))
+
+# Coast: π
+ctrl_med_plot2 <- coast_pi2_boot_no %>% filter(module=="Control") %>%
+  summarise(med = median(pi, na.rm = TRUE)) %>% pull(med)
+ymax2 <- quantile(coast_pi2_boot_no$pi, 0.995, na.rm = TRUE) * 1.05
+
+p_coast_pi_NO <- ggplot(coast_pi2_boot_no, aes(module, pi, fill = module)) +
+  geom_violin(adjust = 3, scale = "width", trim = FALSE) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.shape = NA) +
+  geom_hline(yintercept = ctrl_med_plot2, linetype = "dashed", color = "grey30") +
+  stat_compare_means(method = "wilcox.test", label = "p.signif",
+                     ref.group = "Control", label.y = ymax2 * 11, hide.ns = TRUE, size = 7) +
+  coord_cartesian(ylim = c(NA, ymax2)) +
+  scale_fill_manual(values = pal[levels(coast_pi2_boot_no$module)], drop = FALSE) +
+  scale_y_continuous(trans = "pseudo_log") +
+  labs(title = "Coast", x = NULL, y = "pi") +
+  guides(fill = "none") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 35, hjust = 1))
+
+# Coast: θW
+ctrl_med_plot_w2 <- coast_wat2_boot_no %>% filter(module=="Control") %>%
+  summarise(med = median(watterson_theta, na.rm = TRUE)) %>% pull(med)
+ymax_w2 <- quantile(coast_wat2_boot_no$watterson_theta, 0.995, na.rm = TRUE) * 1.05
+
+p_coast_w_NO <- ggplot(coast_wat2_boot_no, aes(module, watterson_theta, fill = module)) +
+  geom_violin(adjust = 3, scale = "width", trim = FALSE) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.shape = NA) +
+  geom_hline(yintercept = ctrl_med_plot_w2, linetype = "dashed", color = "grey30") +
+  stat_compare_means(method = "wilcox.test", label = "p.signif",
+                     ref.group = "Control", label.y = ymax_w2 * 15, hide.ns = TRUE, size = 7) +
+  coord_cartesian(ylim = c(NA, ymax_w2)) +
+  scale_fill_manual(values = pal[levels(coast_wat2_boot_no$module)], drop = FALSE) +
+  scale_y_continuous(trans = "sqrt") +
+  labs(title = "Coast", x = NULL, y = "watterson theta") +
+  guides(fill = "none") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 35, hjust = 1))
+
+# North: π
+ctrl_med_plot_npi2 <- north_pi2_boot_no %>% filter(module=="Control") %>%
+  summarise(med = median(pi, na.rm = TRUE)) %>% pull(med)
+ymax_npi2 <- quantile(north_pi2_boot_no$pi, 0.995, na.rm = TRUE) * 1.05
+
+p_north_pi_NO <- ggplot(north_pi2_boot_no, aes(module, pi, fill = module)) +
+  geom_violin(adjust = 3, scale = "width", trim = FALSE) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.shape = NA) +
+  geom_hline(yintercept = ctrl_med_plot_npi2, linetype = "dashed", color = "grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_npi2 * 13, hide.ns = TRUE, size = 7) +
+  coord_cartesian(ylim = c(NA, ymax_npi2)) +
+  scale_fill_manual(values = pal[levels(north_pi2_boot_no$module)], drop = FALSE) +
+  scale_y_continuous(trans = "sqrt") +
+  labs(title = "North", x = NULL, y = "pi") +
+  guides(fill = "none") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 35, hjust = 1))
+
+# North: θW
+ctrl_med_plot_nw2 <- north_wat2_boot_no %>% filter(module=="Control") %>%
+  summarise(med = median(watterson_theta, na.rm = TRUE)) %>% pull(med)
+ymax_nw2 <- quantile(north_wat2_boot_no$watterson_theta, 0.995, na.rm = TRUE) * 1.05
+
+p_north_w_NO <- ggplot(north_wat2_boot_no, aes(module, watterson_theta, fill = module)) +
+  geom_violin(adjust = 3, scale = "width", trim = FALSE) +
+  geom_boxplot(width = 0.12, fill = "white", outlier.shape = NA) +
+  geom_hline(yintercept = ctrl_med_plot_nw2, linetype = "dashed", color = "grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_nw2 * 16, hide.ns = TRUE, size = 7) +
+  coord_cartesian(ylim = c(NA, ymax_nw2)) +
+  scale_fill_manual(values = pal[levels(north_wat2_boot_no$module)], drop = FALSE) +
+  scale_y_continuous(trans = "sqrt") +
+  labs(title = "North", x = NULL, y = "watterson theta") +
+  guides(fill = "none") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 35, hjust = 1))
+
+combined_NO <- cowplot::plot_grid(
+  p_coast_pi_NO, p_north_pi_NO,
+  p_coast_w_NO,  p_north_w_NO,
+  labels = c("A","B","C","D"), ncol = 2, align = "hv"
+)
+ggsave("module_pi_watterson_coast_north_cowplot_NO_OUTLIERS.png", combined_NO,
+       width = 12, height = 10, dpi = 300)
+
+cat("\n[Wilcoxon vs Control — COAST π (NO_OUTLIERS)]\n");  print(wilcox_against_control(coast_pi2_no,  pi))
+cat("\n[Wilcoxon vs Control — COAST θW (NO_OUTLIERS)]\n"); print(wilcox_against_control(coast_pi2_no,  watterson_theta))
+cat("\n[Wilcoxon vs Control — NORTH π (NO_OUTLIERS)]\n");  print(wilcox_against_control(north_pi2_no,  pi))
+cat("\n[Wilcoxon vs Control — NORTH θW (NO_OUTLIERS)]\n"); print(wilcox_against_control(north_pi2_no,  watterson_theta))
+
+# ==============================================================================
+# Re-run: FST / DXY (same look; no sqrt transform)
+# ==============================================================================
+
+fst2 <- read_tsv("fst_by_color_from_bed.tsv", show_col_types = FALSE)
+dxy2 <- read_tsv("dxy_by_color_from_bed.tsv", show_col_types = FALSE)
+
+fst_df2 <- fst2 %>%
+  mutate(module = factor(module_to_disp(module), levels = mod_order_disp)) %>%
+  dplyr::select(module, gene, chromosome, window_pos_1, window_pos_2, fst)
+
+dxy_df2 <- dxy2 %>%
+  mutate(module = factor(module_to_disp(module), levels = mod_order_disp)) %>%
+  dplyr::select(module, gene, chromosome, window_pos_1, window_pos_2, dxy)
+
+fst_df2_no <- exclude_outliers(fst_df2, gene, outlier_excl)
+dxy_df2_no <- exclude_outliers(dxy_df2, gene, outlier_excl)
+
+fst_boot2_no <- bootstrap_control_match(fst_df2_no, fst) %>%
+  mutate(module = factor(module, levels = mod_order_disp))
+dxy_boot2_no <- bootstrap_control_match(dxy_df2_no, dxy) %>%
+  mutate(module = factor(module, levels = mod_order_disp))
+
+ctrl_med_fst2 <- fst_boot2_no %>% filter(module=="Control") %>% summarise(med=median(fst,na.rm=TRUE)) %>% pull(med)
+ymax_fst2 <- quantile(fst_boot2_no$fst, 0.995, na.rm=TRUE) * 1.05
+
+p_fst_NO <- ggplot(fst_boot2_no, aes(module, fst, fill = module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_fst2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_fst2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_fst2)) +
+  scale_fill_manual(values = pal[levels(fst_boot2_no$module)], drop = FALSE) +
+  labs(title = " ", x = NULL, y = expression(F[ST])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+ctrl_med_dxy2 <- dxy_boot2_no %>% filter(module=="Control") %>% summarise(med=median(dxy,na.rm=TRUE)) %>% pull(med)
+ymax_dxy2 <- quantile(dxy_boot2_no$dxy, 0.995, na.rm=TRUE) * 1.05
+
+p_dxy_NO <- ggplot(dxy_boot2_no, aes(module, dxy, fill = module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_dxy2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_dxy2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_dxy2)) +
+  scale_fill_manual(values = pal[levels(dxy_boot2_no$module)], drop = FALSE) +
+  labs(title = " ", x = NULL, y = expression(d[xy])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+fd_combined_NO <- cowplot::plot_grid(p_fst_NO, p_dxy_NO, labels = c("A","B"), ncol = 2, align = "hv")
+ggsave("module_fst_dxy_cowplot_NO_OUTLIERS.png", fd_combined_NO, width = 12, height = 5, dpi = 300)
+
+cat("\n[Wilcoxon vs Control — FST (NO_OUTLIERS)]\n"); print(wilcox_against_control(fst_df2_no, fst))
+cat("\n[Wilcoxon vs Control — DXY (NO_OUTLIERS)]\n"); print(wilcox_against_control(dxy_df2_no, dxy))
+
+# ==============================================================================
+# Re-run: ANGSD θπ / θW / FayH (Coast & North)
+# ==============================================================================
+
+coast_FayH2 <- read_tsv("angsd_theta_by_module_coast.tsv", show_col_types = FALSE)
+north_FayH2 <- read_tsv("angsd_theta_by_module_north.tsv", show_col_types = FALSE)
+
+coast_angsd2 <- clean_angsd_by_module(coast_FayH2)
+north_angsd2 <- clean_angsd_by_module(north_FayH2)
+
+coast_piA2 <- coast_angsd2 %>% dplyr::select(module, gene, thetaPi_per_site) %>% rename(theta_pi = thetaPi_per_site)
+coast_wA2  <- coast_angsd2 %>% dplyr::select(module, gene, thetaW_per_site)  %>% rename(theta_w  = thetaW_per_site)
+coast_hA2  <- coast_angsd2 %>% dplyr::select(module, gene, FayH_per_site)    %>% rename(fayH     = FayH_per_site)
+
+north_piA2 <- north_angsd2 %>% dplyr::select(module, gene, thetaPi_per_site) %>% rename(theta_pi = thetaPi_per_site)
+north_wA2  <- north_angsd2 %>% dplyr::select(module, gene, thetaW_per_site)  %>% rename(theta_w  = thetaW_per_site)
+north_hA2  <- north_angsd2 %>% dplyr::select(module, gene, FayH_per_site)    %>% rename(fayH     = FayH_per_site)
+
+coast_piA2_no <- exclude_outliers(coast_piA2, gene, outlier_excl)
+coast_wA2_no  <- exclude_outliers(coast_wA2,  gene, outlier_excl)
+coast_hA2_no  <- exclude_outliers(coast_hA2,  gene, outlier_excl)
+
+north_piA2_no <- exclude_outliers(north_piA2, gene, outlier_excl)
+north_wA2_no  <- exclude_outliers(north_wA2,  gene, outlier_excl)
+north_hA2_no  <- exclude_outliers(north_hA2,  gene, outlier_excl)
+
+coast_piA2_boot_no <- bootstrap_control_match(coast_piA2_no, theta_pi) %>% mutate(module=factor(module, levels=mod_order_disp))
+coast_wA2_boot_no  <- bootstrap_control_match(coast_wA2_no,  theta_w)  %>% mutate(module=factor(module, levels=mod_order_disp))
+coast_hA2_boot_no  <- bootstrap_control_match(coast_hA2_no,  fayH)     %>% mutate(module=factor(module, levels=mod_order_disp))
+
+north_piA2_boot_no <- bootstrap_control_match(north_piA2_no, theta_pi) %>% mutate(module=factor(module, levels=mod_order_disp))
+north_wA2_boot_no  <- bootstrap_control_match(north_wA2_no,  theta_w)  %>% mutate(module=factor(module, levels=mod_order_disp))
+north_hA2_boot_no  <- bootstrap_control_match(north_hA2_no,  fayH)     %>% mutate(module=factor(module, levels=mod_order_disp))
+
+# Coast θπ
+ctrl_med_c_pi2 <- coast_piA2_boot_no %>% filter(module=="Control") %>% summarise(med=median(theta_pi,na.rm=TRUE)) %>% pull(med)
+ymax_c_pi2 <- quantile(coast_piA2_boot_no$theta_pi, 0.995, na.rm=TRUE) * 1.05
+p_coast_pi_angsd_NO <- ggplot(coast_piA2_boot_no, aes(module, theta_pi, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_c_pi2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_c_pi2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_c_pi2)) +
+  scale_fill_manual(values = pal[levels(coast_piA2_boot_no$module)], drop = FALSE) +
+  labs(title="Coast", x=NULL, y=expression(theta[pi])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+# Coast θW
+ctrl_med_c_w2 <- coast_wA2_boot_no %>% filter(module=="Control") %>% summarise(med=median(theta_w,na.rm=TRUE)) %>% pull(med)
+ymax_c_w2 <- quantile(coast_wA2_boot_no$theta_w, 0.995, na.rm=TRUE) * 1.05
+p_coast_w_angsd_NO <- ggplot(coast_wA2_boot_no, aes(module, theta_w, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_c_w2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_c_w2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_c_w2)) +
+  scale_fill_manual(values = pal[levels(coast_wA2_boot_no$module)], drop = FALSE) +
+  labs(title="Coast", x=NULL, y=expression(theta[W])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+# Coast FayH
+ctrl_med_c_h2 <- coast_hA2_boot_no %>% filter(module=="Control") %>% summarise(med=median(fayH,na.rm=TRUE)) %>% pull(med)
+ymax_c_h2 <- quantile(coast_hA2_boot_no$fayH, 0.995, na.rm=TRUE) * 1.10
+p_coast_h_angsd_NO <- ggplot(coast_hA2_boot_no, aes(module, fayH, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_c_h2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_c_h2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_c_h2)) +
+  scale_fill_manual(values = pal[levels(coast_hA2_boot_no$module)], drop = FALSE) +
+  labs(title="Coast", x=NULL, y=expression(Fay[H])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+# North θπ
+ctrl_med_n_pi2 <- north_piA2_boot_no %>% filter(module=="Control") %>% summarise(med=median(theta_pi,na.rm=TRUE)) %>% pull(med)
+ymax_n_pi2 <- quantile(north_piA2_boot_no$theta_pi, 0.995, na.rm=TRUE) * 1.05
+p_north_pi_angsd_NO <- ggplot(north_piA2_boot_no, aes(module, theta_pi, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_n_pi2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_n_pi2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_n_pi2)) +
+  scale_fill_manual(values = pal[levels(north_piA2_boot_no$module)], drop = FALSE) +
+  labs(title="North", x=NULL, y=expression(theta[pi])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+# North θW
+ctrl_med_n_w2 <- north_wA2_boot_no %>% filter(module=="Control") %>% summarise(med=median(theta_w,na.rm=TRUE)) %>% pull(med)
+ymax_n_w2 <- quantile(north_wA2_boot_no$theta_w, 0.995, na.rm=TRUE) * 1.05
+p_north_w_angsd_NO <- ggplot(north_wA2_boot_no, aes(module, theta_w, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_n_w2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_n_w2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_n_w2)) +
+  scale_fill_manual(values = pal[levels(north_wA2_boot_no$module)], drop = FALSE) +
+  labs(title="North", x=NULL, y=expression(theta[W])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+# North FayH
+ctrl_med_n_h2 <- north_hA2_boot_no %>% filter(module=="Control") %>% summarise(med=median(fayH,na.rm=TRUE)) %>% pull(med)
+ymax_n_h2 <- quantile(north_hA2_boot_no$fayH, 0.995, na.rm=TRUE) * 1.10
+p_north_h_angsd_NO <- ggplot(north_hA2_boot_no, aes(module, fayH, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_n_h2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_n_h2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_n_h2)) +
+  scale_fill_manual(values = pal[levels(north_hA2_boot_no$module)], drop = FALSE) +
+  labs(title="North", x=NULL, y=expression(Fay[H])) +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+angsd_grid_NO <- cowplot::plot_grid(
+  p_coast_pi_angsd_NO, p_north_pi_angsd_NO,
+  p_coast_w_angsd_NO,  p_north_w_angsd_NO,
+  labels = c("A","B","C","D"), label_size = 18, ncol = 2, align = "hv"
+)
+ggsave("module_angsd_theta_pi_coast_north_cowplot_NO_OUTLIERS.png", angsd_grid_NO,
+       width = 12, height = 15, dpi = 300)
+
+cat("\n[Wilcoxon vs Control — ANGSD θπ (Coast) NO_OUTLIERS]\n");  print(wilcox_against_control(coast_piA2_no, theta_pi))
+cat("\n[Wilcoxon vs Control — ANGSD θW (Coast) NO_OUTLIERS]\n");  print(wilcox_against_control(coast_wA2_no,  theta_w))
+cat("\n[Wilcoxon vs Control — ANGSD FayH (Coast) NO_OUTLIERS]\n"); print(wilcox_against_control(coast_hA2_no,  fayH))
+cat("\n[Wilcoxon vs Control — ANGSD θπ (North) NO_OUTLIERS]\n");  print(wilcox_against_control(north_piA2_no, theta_pi))
+cat("\n[Wilcoxon vs Control — ANGSD θW (North) NO_OUTLIERS]\n");  print(wilcox_against_control(north_wA2_no,  theta_w))
+cat("\n[Wilcoxon vs Control — ANGSD FayH (North) NO_OUTLIERS]\n"); print(wilcox_against_control(north_hA2_no,  fayH))
+
+# ==============================================================================
+# Re-run: CLR (Coast & North)
+# ==============================================================================
+
+clr_data2 <- read_tsv(
+  "/project/pi_brook_moyers_umb_edu/SF2/clr_analysis5/sf2_color_modules_by_gene_out/sf2_clr_max_by_gene.tsv",
+  col_names = FALSE, show_col_types = FALSE
+)
+colnames(clr_data2) <- c("module", "pop", "gene", "pos", "LR", "file")
+clr_clean2 <- clr_data2 %>% mutate(module_key = norm_module_key(module))
+
+coast_lr2 <- clr_clean2 %>% filter(pop == "coast") %>% transmute(module = module_key, gene, LR)
+north_lr2 <- clr_clean2 %>% filter(pop == "north") %>% transmute(module = module_key, gene, LR)
+
+coast_lr2_no <- exclude_outliers(coast_lr2, gene, outlier_excl)
+north_lr2_no <- exclude_outliers(north_lr2, gene, outlier_excl)
+
+coast_lr2_boot_no <- bootstrap_control_match(coast_lr2_no, LR) %>% mutate(module=factor(module_to_disp(module), levels=mod_order_disp))
+north_lr2_boot_no <- bootstrap_control_match(north_lr2_no, LR) %>% mutate(module=factor(module_to_disp(module), levels=mod_order_disp))
+
+ctrl_med_clr_c2 <- coast_lr2_boot_no %>% filter(module=="Control") %>% summarise(med=median(LR,na.rm=TRUE)) %>% pull(med)
+ymax_clr_c2 <- quantile(coast_lr2_boot_no$LR, 0.995, na.rm=TRUE) * 1.05
+p_coast_lr_NO <- ggplot(coast_lr2_boot_no, aes(module, LR, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_clr_c2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_clr_c2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_clr_c2)) +
+  scale_fill_manual(values = pal[levels(coast_lr2_boot_no$module)], drop = FALSE) +
+  labs(title="Coast", x=NULL, y="CLR") +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+ctrl_med_clr_n2 <- north_lr2_boot_no %>% filter(module=="Control") %>% summarise(med=median(LR,na.rm=TRUE)) %>% pull(med)
+ymax_clr_n2 <- quantile(north_lr2_boot_no$LR, 0.995, na.rm=TRUE) * 1.05
+p_north_lr_NO <- ggplot(north_lr2_boot_no, aes(module, LR, fill=module)) +
+  geom_violin(adjust=3, scale="width", trim=FALSE) +
+  geom_boxplot(width=0.12, fill="white", outlier.shape=NA) +
+  geom_hline(yintercept=ctrl_med_clr_n2, linetype="dashed", color="grey30") +
+  stat_compare_means(method="wilcox.test", label="p.signif", ref.group="Control",
+                     label.y = ymax_clr_n2 * 0.92, hide.ns = TRUE, size =7) +
+  coord_cartesian(ylim = c(NA, ymax_clr_n2)) +
+  scale_fill_manual(values = pal[levels(north_lr2_boot_no$module)], drop = FALSE) +
+  labs(title="North", x=NULL, y="CLR") +
+  guides(fill="none") + theme_bw() +
+  theme(panel.grid.minor=element_blank(), axis.text.x=element_text(angle=35,hjust=1))
+
+clr_grid_NO <- cowplot::plot_grid(p_coast_lr_NO, p_north_lr_NO, labels = c("A","B"), ncol = 2, align = "hv")
+ggsave("clr_violin_box_coast_north_NO_OUTLIERS.png", clr_grid_NO, width = 12, height = 5.5, dpi = 300)
+
+cat("\n[Wilcoxon vs Control — CLR (Coast) NO_OUTLIERS]\n"); print(wilcox_against_control(coast_lr2_no, LR))
+cat("\n[Wilcoxon vs Control — CLR (North) NO_OUTLIERS]\n"); print(wilcox_against_control(north_lr2_no,  LR))
+
+# Big panel (FST/DXY + FayH + CLR), like your preview
+clr_fay_grid_NO <- cowplot::plot_grid(
+  p_fst_NO, p_dxy_NO,
+  p_coast_h_angsd_NO, p_north_h_angsd_NO,
+  p_coast_lr_NO,  p_north_lr_NO,
+  labels = c("A","B","C","D","E","F"), label_size = 18,
+  ncol = 2, align = "hv"
+)
+ggsave("fst_dxy_fayh_clr_violin_box_coast_north_NO_OUTLIERS.png",
+       clr_fay_grid_NO, width = 12, height = 10, dpi = 300)
+
+message("[NO_OUTLIERS] Done. Saved *_NO_OUTLIERS.png outputs.")
 
